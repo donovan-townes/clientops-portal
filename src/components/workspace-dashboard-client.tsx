@@ -188,6 +188,8 @@ export default function WorkspaceDashboardClient({
       pushActivity(`Workspace created: ${data.workspace.name}`);
     }
     await refreshContext();
+    await loadTasks("auto");
+    await loadMembers("auto");
   };
 
   const loadTasks = useCallback(

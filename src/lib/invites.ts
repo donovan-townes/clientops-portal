@@ -1,8 +1,7 @@
 import { Role } from "@prisma/client";
 import crypto from "node:crypto";
 import { prisma } from "@/lib/prisma";
-
-const INVITE_ALLOWED_ROLES = new Set<Role>([Role.OWNER, Role.ADMIN]);
+import { canInvite } from "@/lib/rbac";
 const VALID_INVITE_ROLES = new Set<string>([
   Role.OWNER,
   Role.ADMIN,
@@ -14,7 +13,11 @@ const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export class InviteAcceptanceError extends Error {
   constructor(
-    public readonly code: "NOT_FOUND" | "EXPIRED" | "ALREADY_ACCEPTED",
+    public readonly code:
+      | "NOT_FOUND"
+      | "EXPIRED"
+      | "ALREADY_ACCEPTED"
+      | "FORBIDDEN_RECIPIENT",
     message: string,
   ) {
     super(message);
@@ -38,7 +41,7 @@ export async function createInvite(
     },
   });
 
-  if (!actorMembership || !INVITE_ALLOWED_ROLES.has(actorMembership.role)) {
+  if (!actorMembership || !canInvite(actorMembership.role)) {
     throw new Error("Only workspace Owners and Admins can invite members.");
   }
 
@@ -56,7 +59,12 @@ export async function createInvite(
   });
 }
 
-export async function acceptInvite(userId: string, token: string) {
+export async function acceptInvite(
+  userId: string,
+  userEmail: string,
+  token: string,
+) {
+  const normalizedEmail = userEmail.trim().toLowerCase();
   const normalizedToken = token.trim();
 
   const invite = await prisma.invite.findUnique({
@@ -78,23 +86,32 @@ export async function acceptInvite(userId: string, token: string) {
     throw new InviteAcceptanceError("EXPIRED", "Invite has expired");
   }
 
+  if (invite.email.trim().toLowerCase() !== normalizedEmail) {
+    throw new InviteAcceptanceError(
+      "FORBIDDEN_RECIPIENT",
+      "Invite is intended for a different email address",
+    );
+  }
+
   return prisma.$transaction(async (tx) => {
-    const membership = await tx.membership.upsert({
+    const existingMembership = await tx.membership.findUnique({
       where: {
         workspaceId_userId: {
           workspaceId: invite.workspaceId,
           userId,
         },
       },
-      create: {
-        workspaceId: invite.workspaceId,
-        userId,
-        role: invite.role,
-      },
-      update: {
-        role: invite.role,
-      },
     });
+
+    const membership = existingMembership
+      ? existingMembership
+      : await tx.membership.create({
+          data: {
+            workspaceId: invite.workspaceId,
+            userId,
+            role: invite.role,
+          },
+        });
 
     const acceptedInvite = await tx.invite.update({
       where: { id: invite.id },

@@ -7,6 +7,7 @@ import {
   ACTIVE_WORKSPACE_COOKIE_OPTIONS,
   getActiveWorkspaceIdFromCookieHeader,
 } from "@/lib/workspace-context";
+import { canCreateTask, canViewTasksAndFiles } from "@/lib/rbac";
 import { resolveActiveWorkspaceForUser } from "@/lib/workspaces";
 
 function getContextErrorResponse() {
@@ -34,6 +35,23 @@ export async function GET(request: Request) {
 
   if (!context.activeWorkspace) {
     return getContextErrorResponse();
+  }
+
+  const actorMembership = await prisma.membership.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId: context.activeWorkspace.id,
+        userId: session.user.id,
+      },
+    },
+    select: { role: true },
+  });
+
+  if (!actorMembership || !canViewTasksAndFiles(actorMembership.role)) {
+    return NextResponse.json(
+      { error: "Insufficient permissions to view tasks." },
+      { status: 403 },
+    );
   }
 
   const tasks = await prisma.task.findMany({
@@ -79,6 +97,23 @@ export async function POST(request: Request) {
 
   if (!context.activeWorkspace) {
     return getContextErrorResponse();
+  }
+
+  const actorMembership = await prisma.membership.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId: context.activeWorkspace.id,
+        userId: session.user.id,
+      },
+    },
+    select: { role: true },
+  });
+
+  if (!actorMembership || !canCreateTask(actorMembership.role)) {
+    return NextResponse.json(
+      { error: "Insufficient permissions to create tasks." },
+      { status: 403 },
+    );
   }
 
   const { title, description } = (await request.json()) as {

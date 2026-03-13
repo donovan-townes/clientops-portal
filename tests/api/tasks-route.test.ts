@@ -4,6 +4,9 @@ const getServerSessionMock = vi.fn();
 const resolveActiveWorkspaceForUserMock = vi.fn();
 
 const prismaMock = {
+  membership: {
+    findUnique: vi.fn(),
+  },
   task: {
     findMany: vi.fn(),
     create: vi.fn(),
@@ -28,6 +31,7 @@ describe("/api/tasks", () => {
     process.env.NEXTAUTH_SECRET = "test-secret";
     getServerSessionMock.mockReset();
     resolveActiveWorkspaceForUserMock.mockReset();
+    prismaMock.membership.findUnique.mockReset();
     prismaMock.task.findMany.mockReset();
     prismaMock.task.create.mockReset();
   });
@@ -66,6 +70,7 @@ describe("/api/tasks", () => {
       activeWorkspace: { id: "workspace-2", name: "Demo Workspace" },
       shouldPersistActiveWorkspace: false,
     });
+    prismaMock.membership.findUnique.mockResolvedValue({ role: "OWNER" });
     prismaMock.task.findMany.mockResolvedValue([
       { id: "task-1", title: "Task One", workspaceId: "workspace-2" },
     ]);
@@ -80,10 +85,37 @@ describe("/api/tasks", () => {
     expect(response.status).toBe(200);
     expect(body.activeWorkspaceId).toBe("workspace-2");
     expect(body.tasks).toHaveLength(1);
+    expect(prismaMock.membership.findUnique).toHaveBeenCalledWith({
+      where: {
+        workspaceId_userId: {
+          workspaceId: "workspace-2",
+          userId: "user-1",
+        },
+      },
+      select: { role: true },
+    });
     expect(prismaMock.task.findMany).toHaveBeenCalledWith({
       where: { workspaceId: "workspace-2" },
       orderBy: { createdAt: "desc" },
     });
+  });
+
+  it("returns 403 from GET when caller has no workspace membership", async () => {
+    getServerSessionMock.mockResolvedValue({ user: { id: "user-1" } });
+    resolveActiveWorkspaceForUserMock.mockResolvedValue({
+      workspaces: [{ id: "workspace-2", name: "Demo Workspace" }],
+      activeWorkspace: { id: "workspace-2", name: "Demo Workspace" },
+      shouldPersistActiveWorkspace: false,
+    });
+    prismaMock.membership.findUnique.mockResolvedValue(null);
+
+    const { GET } = await import("@/app/api/tasks/route");
+    const response = await GET(new Request("http://localhost:3000/api/tasks"));
+    const body = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(403);
+    expect(body.error).toBe("Insufficient permissions to view tasks.");
+    expect(prismaMock.task.findMany).not.toHaveBeenCalled();
   });
 
   it("creates a task under the resolved active workspace", async () => {
@@ -92,6 +124,9 @@ describe("/api/tasks", () => {
       workspaces: [{ id: "workspace-3", name: "Client Workspace" }],
       activeWorkspace: { id: "workspace-3", name: "Client Workspace" },
       shouldPersistActiveWorkspace: false,
+    });
+    prismaMock.membership.findUnique.mockResolvedValue({
+      role: "CONTRIBUTOR",
     });
     prismaMock.task.create.mockResolvedValue({
       id: "task-2",
@@ -115,6 +150,15 @@ describe("/api/tasks", () => {
 
     expect(response.status).toBe(200);
     expect(body.activeWorkspaceId).toBe("workspace-3");
+    expect(prismaMock.membership.findUnique).toHaveBeenCalledWith({
+      where: {
+        workspaceId_userId: {
+          workspaceId: "workspace-3",
+          userId: "user-1",
+        },
+      },
+      select: { role: true },
+    });
     expect(prismaMock.task.create).toHaveBeenCalledWith({
       data: {
         workspaceId: "workspace-3",
@@ -125,6 +169,31 @@ describe("/api/tasks", () => {
     expect(body.task.workspaceId).toBe("workspace-3");
   });
 
+  it("returns 403 from POST when role cannot create tasks", async () => {
+    getServerSessionMock.mockResolvedValue({ user: { id: "user-1" } });
+    resolveActiveWorkspaceForUserMock.mockResolvedValue({
+      workspaces: [{ id: "workspace-3", name: "Client Workspace" }],
+      activeWorkspace: { id: "workspace-3", name: "Client Workspace" },
+      shouldPersistActiveWorkspace: false,
+    });
+    prismaMock.membership.findUnique.mockResolvedValue({ role: "VIEWER" });
+
+    const { POST } = await import("@/app/api/tasks/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Create first board" }),
+      }),
+    );
+
+    const body = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(403);
+    expect(body.error).toBe("Insufficient permissions to create tasks.");
+    expect(prismaMock.task.create).not.toHaveBeenCalled();
+  });
+
   it("returns 400 from POST when title is missing", async () => {
     getServerSessionMock.mockResolvedValue({ user: { id: "user-1" } });
     resolveActiveWorkspaceForUserMock.mockResolvedValue({
@@ -132,6 +201,7 @@ describe("/api/tasks", () => {
       activeWorkspace: { id: "workspace-3", name: "Client Workspace" },
       shouldPersistActiveWorkspace: false,
     });
+    prismaMock.membership.findUnique.mockResolvedValue({ role: "ADMIN" });
 
     const { POST } = await import("@/app/api/tasks/route");
     const response = await POST(

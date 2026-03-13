@@ -1,5 +1,6 @@
 import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { canViewMembers } from "@/lib/rbac";
 
 export type WorkspaceMemberSummary = {
   id: string;
@@ -23,7 +24,7 @@ export async function listMembersForWorkspace(
     },
   });
 
-  if (!activeMembership) {
+  if (!activeMembership || !canViewMembers(activeMembership.role)) {
     throw new Error("Workspace access denied.");
   }
 

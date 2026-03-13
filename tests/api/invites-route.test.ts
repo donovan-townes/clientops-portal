@@ -6,7 +6,11 @@ const acceptInviteMock = vi.fn();
 
 class InviteAcceptanceErrorMock extends Error {
   constructor(
-    public readonly code: "NOT_FOUND" | "EXPIRED" | "ALREADY_ACCEPTED",
+    public readonly code:
+      | "NOT_FOUND"
+      | "EXPIRED"
+      | "ALREADY_ACCEPTED"
+      | "FORBIDDEN_RECIPIENT",
     message: string,
   ) {
     super(message);
@@ -159,7 +163,9 @@ describe("POST /api/invites/accept", () => {
   });
 
   it("returns 400 when token is missing", async () => {
-    getServerSessionMock.mockResolvedValue({ user: { id: "user-2" } });
+    getServerSessionMock.mockResolvedValue({
+      user: { id: "user-2", email: "invitee@example.com" },
+    });
 
     const { POST } = await import("@/app/api/invites/accept/route");
 
@@ -178,7 +184,9 @@ describe("POST /api/invites/accept", () => {
   });
 
   it("returns 410 when invite token is expired", async () => {
-    getServerSessionMock.mockResolvedValue({ user: { id: "user-2" } });
+    getServerSessionMock.mockResolvedValue({
+      user: { id: "user-2", email: "invitee@example.com" },
+    });
     acceptInviteMock.mockRejectedValue(
       new InviteAcceptanceErrorMock("EXPIRED", "Invite has expired"),
     );
@@ -200,7 +208,9 @@ describe("POST /api/invites/accept", () => {
   });
 
   it("returns 409 when invite was already accepted", async () => {
-    getServerSessionMock.mockResolvedValue({ user: { id: "user-2" } });
+    getServerSessionMock.mockResolvedValue({
+      user: { id: "user-2", email: "invitee@example.com" },
+    });
     acceptInviteMock.mockRejectedValue(
       new InviteAcceptanceErrorMock(
         "ALREADY_ACCEPTED",
@@ -224,8 +234,37 @@ describe("POST /api/invites/accept", () => {
     expect(body.error).toBe("Invite has already been accepted");
   });
 
+  it("returns 403 when invite token belongs to a different email", async () => {
+    getServerSessionMock.mockResolvedValue({
+      user: { id: "user-2", email: "wrong@example.com" },
+    });
+    acceptInviteMock.mockRejectedValue(
+      new InviteAcceptanceErrorMock(
+        "FORBIDDEN_RECIPIENT",
+        "Invite is intended for a different email address",
+      ),
+    );
+
+    const { POST } = await import("@/app/api/invites/accept/route");
+
+    const response = await POST(
+      new Request("http://localhost:3000/api/invites/accept", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: "foreign-token" }),
+      }),
+    );
+
+    const body = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(403);
+    expect(body.error).toBe("Invite is intended for a different email address");
+  });
+
   it("returns 200 and accepted payload for valid token", async () => {
-    getServerSessionMock.mockResolvedValue({ user: { id: "user-2" } });
+    getServerSessionMock.mockResolvedValue({
+      user: { id: "user-2", email: "invitee@example.com" },
+    });
     acceptInviteMock.mockResolvedValue({
       membership: {
         id: "membership-1",
@@ -261,6 +300,10 @@ describe("POST /api/invites/accept", () => {
     expect(response.status).toBe(200);
     expect(body.accepted.membership.id).toBe("membership-1");
     expect(body.accepted.invite.id).toBe("invite-1");
-    expect(acceptInviteMock).toHaveBeenCalledWith("user-2", "valid-token");
+    expect(acceptInviteMock).toHaveBeenCalledWith(
+      "user-2",
+      "invitee@example.com",
+      "valid-token",
+    );
   });
 });

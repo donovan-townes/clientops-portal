@@ -10,6 +10,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
   }
 
+  const sessionEmail = session.user.email?.trim();
+
+  if (!sessionEmail) {
+    return NextResponse.json(
+      { error: "Authenticated user email is required" },
+      { status: 400 },
+    );
+  }
+
   const { token } = (await request.json()) as { token?: string };
   const trimmedToken = token?.trim() ?? "";
 
@@ -21,7 +30,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const accepted = await acceptInvite(session.user.id, trimmedToken);
+    const accepted = await acceptInvite(
+      session.user.id,
+      sessionEmail,
+      trimmedToken,
+    );
     return NextResponse.json({ accepted });
   } catch (error) {
     if (error instanceof InviteAcceptanceError) {
@@ -31,6 +44,10 @@ export async function POST(request: Request) {
 
       if (error.code === "ALREADY_ACCEPTED") {
         return NextResponse.json({ error: error.message }, { status: 409 });
+      }
+
+      if (error.code === "FORBIDDEN_RECIPIENT") {
+        return NextResponse.json({ error: error.message }, { status: 403 });
       }
 
       return NextResponse.json({ error: error.message }, { status: 404 });
