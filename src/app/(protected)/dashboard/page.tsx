@@ -31,6 +31,31 @@ export default async function DashboardPage() {
       })
     : [];
 
+  const initialMembers = context.activeWorkspace
+    ? await prisma.membership.findMany({
+        where: { workspaceId: context.activeWorkspace.id },
+        include: {
+          user: {
+            select: {
+              email: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
+
+  const initialActiveMembership = context.activeWorkspace
+    ? await prisma.membership.findUnique({
+        where: {
+          workspaceId_userId: {
+            workspaceId: context.activeWorkspace.id,
+            userId: session.user.id,
+          },
+        },
+      })
+    : null;
+
   return (
     <main className="mx-auto min-h-screen w-full max-w-4xl px-6 py-10">
       <div className="space-y-2">
@@ -48,6 +73,16 @@ export default async function DashboardPage() {
           initialActiveWorkspaceId={context.activeWorkspace?.id ?? null}
           initialTasks={initialTasks}
           initialTasksContextWorkspaceId={context.activeWorkspace?.id ?? null}
+          initialMembers={initialMembers.map((membership) => ({
+            id: membership.id,
+            workspaceId: membership.workspaceId,
+            userId: membership.userId,
+            email: membership.user.email,
+            role: membership.role,
+            createdAt: membership.createdAt.toISOString(),
+          }))}
+          initialMembersContextWorkspaceId={context.activeWorkspace?.id ?? null}
+          initialActiveRole={initialActiveMembership?.role ?? null}
         />
       </div>
     </main>
