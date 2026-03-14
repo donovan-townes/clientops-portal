@@ -16,7 +16,12 @@ type Task = {
   id: string;
   title: string;
   workspaceId: string;
+  status: TaskStatus;
+  assigneeUserId: string | null;
+  dueAt: string | null;
 };
+
+type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
 
 type TasksResponse = {
   tasks: Task[];
@@ -92,6 +97,14 @@ export default function WorkspaceDashboardClient({
   const [activeRole, setActiveRole] = useState<Role | null>(initialActiveRole);
   const [submitting, setSubmitting] = useState(false);
   const [tasksSubmitting, setTasksSubmitting] = useState(false);
+  const [taskUpdatingId, setTaskUpdatingId] = useState<string | null>(null);
+  const [taskDeletingId, setTaskDeletingId] = useState<string | null>(null);
+  const [taskTitleDrafts, setTaskTitleDrafts] = useState<Record<string, string>>(
+    () =>
+      Object.fromEntries(
+        initialTasks.map((task) => [task.id, task.title] as const),
+      ),
+  );
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
@@ -206,6 +219,9 @@ export default function WorkspaceDashboardClient({
       }
 
       setTasks(data.tasks);
+      setTaskTitleDrafts(
+        Object.fromEntries(data.tasks.map((task) => [task.id, task.title] as const)),
+      );
       setTasksContextWorkspaceId(data.activeWorkspaceId);
       if (mode === "manual") {
         pushActivity(
@@ -285,6 +301,107 @@ export default function WorkspaceDashboardClient({
       );
     }
     await loadTasks();
+  };
+
+  const handleUpdateTask = async (
+    taskId: string,
+    payload: {
+      title?: string;
+      status?: TaskStatus;
+    },
+    activityMessage: string,
+  ) => {
+    setTaskUpdatingId(taskId);
+    setError(null);
+
+    const response = await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = (await response.json()) as
+      | { task?: Task; activeWorkspaceId?: string; error?: string }
+      | { error: string };
+
+    setTaskUpdatingId(null);
+
+    if (!response.ok || "error" in data) {
+      const message =
+        "error" in data ? (data.error ?? "Unable to update task.") : "Unable to update task.";
+      setError(message);
+      pushActivity(`Task update failed: ${message}`);
+      return;
+    }
+
+    pushActivity(activityMessage);
+    await loadTasks("auto");
+  };
+
+  const handleSaveTaskTitle = async (task: Task) => {
+    const draftTitle = taskTitleDrafts[task.id] ?? task.title;
+
+    if (!draftTitle.trim()) {
+      setError("Task title is required");
+      return;
+    }
+
+    if (draftTitle.trim() === task.title) {
+      return;
+    }
+
+    await handleUpdateTask(
+      task.id,
+      { title: draftTitle },
+      `Task updated in ${task.workspaceId}: ${draftTitle.trim()}`,
+    );
+  };
+
+  const handleTaskStatusChange = async (
+    task: Task,
+    nextStatus: TaskStatus,
+  ) => {
+    if (task.status === nextStatus) {
+      return;
+    }
+
+    await handleUpdateTask(
+      task.id,
+      { status: nextStatus },
+      `Task status changed in ${task.workspaceId}: ${task.title} (${task.status} → ${nextStatus})`,
+    );
+  };
+
+  const handleDeleteTask = async (task: Task) => {
+    setTaskDeletingId(task.id);
+    setError(null);
+
+    const response = await fetch(`/api/tasks/${task.id}`, {
+      method: "DELETE",
+    });
+
+    const data = (await response.json()) as
+      | { deletedTaskId?: string; activeWorkspaceId?: string; error?: string }
+      | { error: string };
+
+    setTaskDeletingId(null);
+
+    if (!response.ok || "error" in data) {
+      const message =
+        "error" in data ? (data.error ?? "Unable to delete task.") : "Unable to delete task.";
+      setError(message);
+      pushActivity(`Task delete failed: ${message}`);
+      return;
+    }
+
+    setTasks((previous) => previous.filter((t) => t.id !== task.id));
+    setTaskTitleDrafts((previous) => {
+      const next = { ...previous };
+      delete next[task.id];
+      return next;
+    });
+    pushActivity(`Task deleted in ${task.workspaceId}: ${task.title}`);
+    await loadTasks("auto");
   };
 
   const handleCreateInvite = async (
@@ -374,6 +491,11 @@ export default function WorkspaceDashboardClient({
     workspaces.find((workspace) => workspace.id === activeWorkspaceId)?.name ??
     null;
   const canInvite = activeRole === "OWNER" || activeRole === "ADMIN";
+  const canEditTasks =
+    activeRole === "OWNER" ||
+    activeRole === "ADMIN" ||
+    activeRole === "CONTRIBUTOR";
+  const canDeleteTasks = activeRole === "OWNER" || activeRole === "ADMIN";
 
   return (
     <div className="space-y-6">
@@ -406,6 +528,9 @@ export default function WorkspaceDashboardClient({
           {activeWorkspaceName
             ? `Current context: ${activeWorkspaceName}`
             : "No active workspace selected yet."}
+        </p>
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          Current role: {activeRole ?? "Unknown"}
         </p>
       </section>
 
@@ -586,6 +711,14 @@ export default function WorkspaceDashboardClient({
             : "Load tasks to verify active workspace scoping."}
         </p>
 
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          {canDeleteTasks
+            ? "Task lifecycle controls available (Owner/Admin/Contributor edit, Owner/Admin delete)."
+            : canEditTasks
+              ? "Task edit/status controls available. Delete is restricted to Owners/Admins."
+              : "Task lifecycle controls restricted by role."}
+        </p>
+
         <form
           onSubmit={handleCreateTask}
           className="mt-4 flex flex-col gap-3 sm:flex-row"
@@ -616,12 +749,63 @@ export default function WorkspaceDashboardClient({
                 key={task.id}
                 className="rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700"
               >
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {task.title}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  workspaceId: {task.workspaceId}
-                </p>
+                <div className="flex flex-col gap-2">
+                  <input
+                    value={taskTitleDrafts[task.id] ?? task.title}
+                    onChange={(event) =>
+                      setTaskTitleDrafts((previous) => ({
+                        ...previous,
+                        [task.id]: event.target.value,
+                      }))
+                    }
+                    disabled={!canEditTasks || taskUpdatingId === task.id}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  />
+
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <select
+                      value={task.status}
+                      onChange={(event) => {
+                        void handleTaskStatusChange(
+                          task,
+                          event.target.value as TaskStatus,
+                        );
+                      }}
+                      disabled={!canEditTasks || taskUpdatingId === task.id}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-white sm:w-44"
+                    >
+                      <option value="TODO">TODO</option>
+                      <option value="IN_PROGRESS">IN_PROGRESS</option>
+                      <option value="DONE">DONE</option>
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleSaveTaskTitle(task);
+                      }}
+                      disabled={!canEditTasks || taskUpdatingId === task.id}
+                      className="rounded-lg border border-cyan-300 px-3 py-1 text-xs font-semibold text-cyan-700 hover:bg-cyan-50 disabled:opacity-60 dark:border-cyan-900/50 dark:text-cyan-300 dark:hover:bg-cyan-950/30"
+                    >
+                      {taskUpdatingId === task.id ? "Saving..." : "Save"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleDeleteTask(task);
+                      }}
+                      disabled={taskDeletingId === task.id}
+                      className="rounded-lg border border-red-300 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-950/30"
+                    >
+                      {taskDeletingId === task.id ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    status: {task.status} · workspaceId: {task.workspaceId}
+                  </p>
+                </div>
               </div>
             ))
           )}

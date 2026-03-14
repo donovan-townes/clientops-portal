@@ -71,7 +71,10 @@ export default async function DashboardPage() {
         <WorkspaceDashboardClient
           initialWorkspaces={context.workspaces}
           initialActiveWorkspaceId={context.activeWorkspace?.id ?? null}
-          initialTasks={initialTasks}
+          initialTasks={initialTasks.map((task) => ({
+            ...task,
+            dueAt: task.dueAt ? task.dueAt.toISOString() : null,
+          }))}
           initialTasksContextWorkspaceId={context.activeWorkspace?.id ?? null}
           initialMembers={initialMembers.map((membership) => ({
             id: membership.id,
