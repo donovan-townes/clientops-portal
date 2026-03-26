@@ -38,6 +38,15 @@ export default async function DashboardPage() {
       })
     : [];
 
+  const initialActivityEvents = context.activeWorkspace
+    ? await prisma.activityEvent.findMany({
+        where: { workspaceId: context.activeWorkspace.id },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        include: { actor: { select: { email: true } } },
+      })
+    : [];
+
   const initialMembers = context.activeWorkspace
     ? await prisma.membership.findMany({
         where: { workspaceId: context.activeWorkspace.id },
@@ -99,8 +108,18 @@ export default async function DashboardPage() {
             createdAt: membership.createdAt.toISOString(),
           }))}
           initialMembersContextWorkspaceId={context.activeWorkspace?.id ?? null}
-          initialActiveRole={initialActiveMembership?.role ?? null}
-        />
+          initialActiveRole={initialActiveMembership?.role ?? null}            initialActivityEvents={initialActivityEvents.map((event) => ({
+              id: event.id,
+              workspaceId: event.workspaceId,
+              actorUserId: event.actorUserId,
+              actorEmail: event.actor.email,
+              type: event.type,
+              payloadJson: event.payloadJson,
+              createdAt: event.createdAt.toISOString(),
+            }))}
+            initialActivityEventsContextWorkspaceId={
+              context.activeWorkspace?.id ?? null
+            }        />
       </div>
     </main>
   );

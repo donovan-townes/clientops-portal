@@ -48,6 +48,21 @@ type ActivityItem = {
   message: string;
 };
 
+type ActivityEvent = {
+  id: string;
+  workspaceId: string;
+  actorUserId: string;
+  actorEmail: string;
+  type: string;
+  payloadJson: unknown;
+  createdAt: string;
+};
+
+type ActivityEventsResponse = {
+  events: ActivityEvent[];
+  activeWorkspaceId: string;
+};
+
 type Role = "OWNER" | "ADMIN" | "CONTRIBUTOR" | "VIEWER";
 
 type Member = {
@@ -84,6 +99,8 @@ type WorkspaceDashboardClientProps = {
   initialMembers: Member[];
   initialMembersContextWorkspaceId: string | null;
   initialActiveRole: Role | null;
+  initialActivityEvents: ActivityEvent[];
+  initialActivityEventsContextWorkspaceId: string | null;
 };
 
 export default function WorkspaceDashboardClient({
@@ -96,6 +113,8 @@ export default function WorkspaceDashboardClient({
   initialMembers,
   initialMembersContextWorkspaceId,
   initialActiveRole,
+  initialActivityEvents,
+  initialActivityEventsContextWorkspaceId,
 }: WorkspaceDashboardClientProps) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>(initialWorkspaces);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(
@@ -118,6 +137,11 @@ export default function WorkspaceDashboardClient({
     string | null
   >(initialMembersContextWorkspaceId);
   const [activeRole, setActiveRole] = useState<Role | null>(initialActiveRole);
+  const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>(
+    initialActivityEvents,
+  );
+  const [activityEventsContextWorkspaceId, setActivityEventsContextWorkspaceId] =
+    useState<string | null>(initialActivityEventsContextWorkspaceId);
   const [submitting, setSubmitting] = useState(false);
   const [tasksSubmitting, setTasksSubmitting] = useState(false);
   const [deliverablesSubmitting, setDeliverablesSubmitting] = useState(false);
@@ -193,6 +217,8 @@ export default function WorkspaceDashboardClient({
       setMembers([]);
       setMembersContextWorkspaceId(null);
       setActiveRole(null);
+      setActivityEvents([]);
+      setActivityEventsContextWorkspaceId(null);
     }
 
     const workspaceName = data.workspaces.find(
@@ -236,6 +262,7 @@ export default function WorkspaceDashboardClient({
     await loadTasks("auto");
     await loadDeliverables("auto");
     await loadMembers("auto");
+    await loadActivityEvents("auto");
   };
 
   const loadTasks = useCallback(
@@ -334,6 +361,39 @@ export default function WorkspaceDashboardClient({
 
       pushActivity(
         `Deliverables auto-synced for workspace ${data.activeWorkspaceId} (${data.deliverables.length})`,
+      );
+    },
+    [pushActivity],
+  );
+
+  const loadActivityEvents = useCallback(
+    async (mode: "manual" | "auto" = "manual") => {
+      setError(null);
+
+      const response = await fetch("/api/activity", { method: "GET" });
+      const data = (await response.json()) as
+        | ActivityEventsResponse
+        | { error: string };
+
+      if (!response.ok || "error" in data) {
+        const message =
+          "error" in data ? data.error : "Unable to load activity.";
+        setError(message);
+        return;
+      }
+
+      setActivityEvents(data.events);
+      setActivityEventsContextWorkspaceId(data.activeWorkspaceId);
+
+      if (mode === "manual") {
+        pushActivity(
+          `Activity loaded for workspace ${data.activeWorkspaceId} (${data.events.length})`,
+        );
+        return;
+      }
+
+      pushActivity(
+        `Activity auto-synced for workspace ${data.activeWorkspaceId} (${data.events.length})`,
       );
     },
     [pushActivity],
@@ -645,6 +705,7 @@ export default function WorkspaceDashboardClient({
     await loadTasks("auto");
     await loadDeliverables("auto");
     await loadMembers("auto");
+    await loadActivityEvents("auto");
   };
 
   const activeWorkspaceName =
@@ -1081,6 +1142,52 @@ export default function WorkspaceDashboardClient({
                       : "Delete"}
                   </button>
                 </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Activity Feed (Scoped)
+          </h2>
+          <button
+            type="button"
+            onClick={() => {
+              void loadActivityEvents("manual");
+            }}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            Load Activity
+          </button>
+        </div>
+
+        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          {activityEventsContextWorkspaceId
+            ? `API scoped to workspace: ${activityEventsContextWorkspaceId}`
+            : "Load activity to verify workspace audit log scope."}
+        </p>
+
+        <div className="mt-4 space-y-2">
+          {activityEvents.length === 0 ? (
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              No activity events loaded yet.
+            </p>
+          ) : (
+            activityEvents.map((event) => (
+              <div
+                key={event.id}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700"
+              >
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {event.type}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {event.actorEmail} &middot;{" "}
+                  {new Date(event.createdAt).toLocaleString()}
+                </p>
               </div>
             ))
           )}
