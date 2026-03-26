@@ -18,6 +18,11 @@ const prismaMock = {
   $transaction: vi.fn(),
 };
 
+const now = () => Date.now();
+const daysFromNow = (days: number) =>
+  new Date(now() + days * 24 * 60 * 60 * 1000);
+const daysAgo = (days: number) => new Date(now() - days * 24 * 60 * 60 * 1000);
+
 vi.mock("@/lib/prisma", () => ({
   prisma: prismaMock,
 }));
@@ -49,9 +54,9 @@ describe("EPIC 3 — acceptInvite service", () => {
       email: "invitee@example.com",
       role: Role.CONTRIBUTOR,
       token: "expired-token",
-      expiresAt: new Date("2026-03-01T00:00:00.000Z"),
+      expiresAt: daysAgo(1),
       acceptedAt: null,
-      createdAt: new Date("2026-02-20T00:00:00.000Z"),
+      createdAt: daysAgo(20),
     });
 
     const { acceptInvite } = await import("@/lib/invites");
@@ -68,9 +73,9 @@ describe("EPIC 3 — acceptInvite service", () => {
       email: "invitee@example.com",
       role: Role.CONTRIBUTOR,
       token: "accepted-token",
-      expiresAt: new Date("2026-03-20T00:00:00.000Z"),
-      acceptedAt: new Date("2026-03-10T00:00:00.000Z"),
-      createdAt: new Date("2026-02-20T00:00:00.000Z"),
+      expiresAt: daysFromNow(2),
+      acceptedAt: daysAgo(2),
+      createdAt: daysAgo(20),
     });
 
     const { acceptInvite } = await import("@/lib/invites");
@@ -87,9 +92,9 @@ describe("EPIC 3 — acceptInvite service", () => {
       email: "other-user@example.com",
       role: Role.CONTRIBUTOR,
       token: "valid-token",
-      expiresAt: new Date("2026-03-20T00:00:00.000Z"),
+      expiresAt: daysFromNow(2),
       acceptedAt: null,
-      createdAt: new Date("2026-02-20T00:00:00.000Z"),
+      createdAt: daysAgo(20),
     });
 
     const { acceptInvite } = await import("@/lib/invites");
@@ -106,9 +111,9 @@ describe("EPIC 3 — acceptInvite service", () => {
       email: "invitee@example.com",
       role: Role.CONTRIBUTOR,
       token: "valid-token",
-      expiresAt: new Date("2026-03-20T00:00:00.000Z"),
+      expiresAt: daysFromNow(2),
       acceptedAt: null,
-      createdAt: new Date("2026-02-20T00:00:00.000Z"),
+      createdAt: daysAgo(20),
     });
 
     txMock.membership.findUnique.mockResolvedValue(null);
@@ -124,9 +129,9 @@ describe("EPIC 3 — acceptInvite service", () => {
       email: "invitee@example.com",
       role: Role.CONTRIBUTOR,
       token: "valid-token",
-      expiresAt: new Date("2026-03-20T00:00:00.000Z"),
-      acceptedAt: new Date("2026-03-12T00:00:00.000Z"),
-      createdAt: new Date("2026-02-20T00:00:00.000Z"),
+      expiresAt: daysFromNow(2),
+      acceptedAt: daysAgo(1),
+      createdAt: daysAgo(20),
     });
     prismaMock.$transaction.mockImplementation(async (callback) =>
       callback(txMock),
@@ -170,9 +175,9 @@ describe("EPIC 3 — acceptInvite service", () => {
       email: "owner@example.com",
       role: Role.CONTRIBUTOR,
       token: "valid-token",
-      expiresAt: new Date("2026-03-20T00:00:00.000Z"),
+      expiresAt: daysFromNow(2),
       acceptedAt: null,
-      createdAt: new Date("2026-02-20T00:00:00.000Z"),
+      createdAt: daysAgo(20),
     });
 
     txMock.membership.findUnique.mockResolvedValue({
@@ -187,9 +192,9 @@ describe("EPIC 3 — acceptInvite service", () => {
       email: "owner@example.com",
       role: Role.CONTRIBUTOR,
       token: "valid-token",
-      expiresAt: new Date("2026-03-20T00:00:00.000Z"),
-      acceptedAt: new Date("2026-03-12T00:00:00.000Z"),
-      createdAt: new Date("2026-02-20T00:00:00.000Z"),
+      expiresAt: daysFromNow(2),
+      acceptedAt: daysAgo(1),
+      createdAt: daysAgo(20),
     });
     prismaMock.$transaction.mockImplementation(async (callback) =>
       callback(txMock),

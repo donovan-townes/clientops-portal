@@ -28,6 +28,21 @@ type TasksResponse = {
   activeWorkspaceId: string;
 };
 
+type Deliverable = {
+  id: string;
+  workspaceId: string;
+  taskId: string | null;
+  filename: string;
+  storageKey: string;
+  uploadedByUserId: string;
+  createdAt?: string;
+};
+
+type DeliverablesResponse = {
+  deliverables: Deliverable[];
+  activeWorkspaceId: string;
+};
+
 type ActivityItem = {
   id: string;
   message: string;
@@ -64,6 +79,8 @@ type WorkspaceDashboardClientProps = {
   initialActiveWorkspaceId: string | null;
   initialTasks: Task[];
   initialTasksContextWorkspaceId: string | null;
+  initialDeliverables: Deliverable[];
+  initialDeliverablesContextWorkspaceId: string | null;
   initialMembers: Member[];
   initialMembersContextWorkspaceId: string | null;
   initialActiveRole: Role | null;
@@ -74,6 +91,8 @@ export default function WorkspaceDashboardClient({
   initialActiveWorkspaceId,
   initialTasks,
   initialTasksContextWorkspaceId,
+  initialDeliverables,
+  initialDeliverablesContextWorkspaceId,
   initialMembers,
   initialMembersContextWorkspaceId,
   initialActiveRole,
@@ -90,6 +109,10 @@ export default function WorkspaceDashboardClient({
   const [tasksContextWorkspaceId, setTasksContextWorkspaceId] = useState<
     string | null
   >(initialTasksContextWorkspaceId);
+  const [deliverables, setDeliverables] =
+    useState<Deliverable[]>(initialDeliverables);
+  const [deliverablesContextWorkspaceId, setDeliverablesContextWorkspaceId] =
+    useState<string | null>(initialDeliverablesContextWorkspaceId);
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [membersContextWorkspaceId, setMembersContextWorkspaceId] = useState<
     string | null
@@ -97,13 +120,20 @@ export default function WorkspaceDashboardClient({
   const [activeRole, setActiveRole] = useState<Role | null>(initialActiveRole);
   const [submitting, setSubmitting] = useState(false);
   const [tasksSubmitting, setTasksSubmitting] = useState(false);
+  const [deliverablesSubmitting, setDeliverablesSubmitting] = useState(false);
   const [taskUpdatingId, setTaskUpdatingId] = useState<string | null>(null);
   const [taskDeletingId, setTaskDeletingId] = useState<string | null>(null);
-  const [taskTitleDrafts, setTaskTitleDrafts] = useState<Record<string, string>>(
-    () =>
-      Object.fromEntries(
-        initialTasks.map((task) => [task.id, task.title] as const),
-      ),
+  const [deliverableDeletingId, setDeliverableDeletingId] = useState<
+    string | null
+  >(null);
+  const [deliverableFile, setDeliverableFile] = useState<File | null>(null);
+  const [deliverableTaskId, setDeliverableTaskId] = useState("");
+  const [taskTitleDrafts, setTaskTitleDrafts] = useState<
+    Record<string, string>
+  >(() =>
+    Object.fromEntries(
+      initialTasks.map((task) => [task.id, task.title] as const),
+    ),
   );
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
@@ -158,6 +188,8 @@ export default function WorkspaceDashboardClient({
     if (!data.activeWorkspaceId) {
       setTasks([]);
       setTasksContextWorkspaceId(null);
+      setDeliverables([]);
+      setDeliverablesContextWorkspaceId(null);
       setMembers([]);
       setMembersContextWorkspaceId(null);
       setActiveRole(null);
@@ -202,6 +234,7 @@ export default function WorkspaceDashboardClient({
     }
     await refreshContext();
     await loadTasks("auto");
+    await loadDeliverables("auto");
     await loadMembers("auto");
   };
 
@@ -220,7 +253,9 @@ export default function WorkspaceDashboardClient({
 
       setTasks(data.tasks);
       setTaskTitleDrafts(
-        Object.fromEntries(data.tasks.map((task) => [task.id, task.title] as const)),
+        Object.fromEntries(
+          data.tasks.map((task) => [task.id, task.title] as const),
+        ),
       );
       setTasksContextWorkspaceId(data.activeWorkspaceId);
       if (mode === "manual") {
@@ -271,6 +306,39 @@ export default function WorkspaceDashboardClient({
     [pushActivity],
   );
 
+  const loadDeliverables = useCallback(
+    async (mode: "manual" | "auto" = "manual") => {
+      setError(null);
+
+      const response = await fetch("/api/deliverables", { method: "GET" });
+      const data = (await response.json()) as
+        | DeliverablesResponse
+        | { error: string };
+
+      if (!response.ok || "error" in data) {
+        const message =
+          "error" in data ? data.error : "Unable to load deliverables.";
+        setError(message);
+        return;
+      }
+
+      setDeliverables(data.deliverables);
+      setDeliverablesContextWorkspaceId(data.activeWorkspaceId);
+
+      if (mode === "manual") {
+        pushActivity(
+          `Deliverables loaded for workspace ${data.activeWorkspaceId} (${data.deliverables.length})`,
+        );
+        return;
+      }
+
+      pushActivity(
+        `Deliverables auto-synced for workspace ${data.activeWorkspaceId} (${data.deliverables.length})`,
+      );
+    },
+    [pushActivity],
+  );
+
   const handleCreateTask = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setTasksSubmitting(true);
@@ -303,6 +371,96 @@ export default function WorkspaceDashboardClient({
     await loadTasks();
   };
 
+  const handleUploadDeliverable = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    setError(null);
+
+    if (!deliverableFile) {
+      setError("File is required");
+      return;
+    }
+
+    setDeliverablesSubmitting(true);
+
+    const formData = new FormData();
+    formData.set("file", deliverableFile);
+
+    if (deliverableTaskId.trim()) {
+      formData.set("taskId", deliverableTaskId.trim());
+    }
+
+    const response = await fetch("/api/deliverables", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = (await response.json()) as
+      | {
+          deliverable?: Deliverable;
+          activeWorkspaceId?: string;
+          error?: string;
+        }
+      | { error: string };
+
+    setDeliverablesSubmitting(false);
+
+    if (!response.ok || "error" in data) {
+      const message =
+        "error" in data
+          ? (data.error ?? "Unable to upload deliverable.")
+          : "Unable to upload deliverable.";
+      setError(message);
+      pushActivity(`Deliverable upload failed: ${message}`);
+      return;
+    }
+
+    setDeliverableFile(null);
+    setDeliverableTaskId("");
+    pushActivity(
+      `Deliverable uploaded in ${data.activeWorkspaceId ?? "workspace"}: ${data.deliverable?.filename ?? "file"}`,
+    );
+    await loadDeliverables("auto");
+  };
+
+  const handleDeleteDeliverable = async (deliverable: Deliverable) => {
+    setDeliverableDeletingId(deliverable.id);
+    setError(null);
+
+    const response = await fetch(`/api/deliverables/${deliverable.id}`, {
+      method: "DELETE",
+    });
+
+    const data = (await response.json()) as
+      | {
+          deletedDeliverableId?: string;
+          activeWorkspaceId?: string;
+          error?: string;
+        }
+      | { error: string };
+
+    setDeliverableDeletingId(null);
+
+    if (!response.ok || "error" in data) {
+      const message =
+        "error" in data
+          ? (data.error ?? "Unable to delete deliverable.")
+          : "Unable to delete deliverable.";
+      setError(message);
+      pushActivity(`Deliverable delete failed: ${message}`);
+      return;
+    }
+
+    setDeliverables((previous) =>
+      previous.filter((item) => item.id !== deliverable.id),
+    );
+    pushActivity(
+      `Deliverable deleted in ${deliverable.workspaceId}: ${deliverable.filename}`,
+    );
+    await loadDeliverables("auto");
+  };
+
   const handleUpdateTask = async (
     taskId: string,
     payload: {
@@ -328,7 +486,9 @@ export default function WorkspaceDashboardClient({
 
     if (!response.ok || "error" in data) {
       const message =
-        "error" in data ? (data.error ?? "Unable to update task.") : "Unable to update task.";
+        "error" in data
+          ? (data.error ?? "Unable to update task.")
+          : "Unable to update task.";
       setError(message);
       pushActivity(`Task update failed: ${message}`);
       return;
@@ -357,10 +517,7 @@ export default function WorkspaceDashboardClient({
     );
   };
 
-  const handleTaskStatusChange = async (
-    task: Task,
-    nextStatus: TaskStatus,
-  ) => {
+  const handleTaskStatusChange = async (task: Task, nextStatus: TaskStatus) => {
     if (task.status === nextStatus) {
       return;
     }
@@ -388,7 +545,9 @@ export default function WorkspaceDashboardClient({
 
     if (!response.ok || "error" in data) {
       const message =
-        "error" in data ? (data.error ?? "Unable to delete task.") : "Unable to delete task.";
+        "error" in data
+          ? (data.error ?? "Unable to delete task.")
+          : "Unable to delete task.";
       setError(message);
       pushActivity(`Task delete failed: ${message}`);
       return;
@@ -484,6 +643,7 @@ export default function WorkspaceDashboardClient({
 
     await refreshContext();
     await loadTasks("auto");
+    await loadDeliverables("auto");
     await loadMembers("auto");
   };
 
@@ -496,6 +656,12 @@ export default function WorkspaceDashboardClient({
     activeRole === "ADMIN" ||
     activeRole === "CONTRIBUTOR";
   const canDeleteTasks = activeRole === "OWNER" || activeRole === "ADMIN";
+  const canUploadDeliverables =
+    activeRole === "OWNER" ||
+    activeRole === "ADMIN" ||
+    activeRole === "CONTRIBUTOR";
+  const canDeleteDeliverables =
+    activeRole === "OWNER" || activeRole === "ADMIN";
 
   return (
     <div className="space-y-6">
@@ -805,6 +971,115 @@ export default function WorkspaceDashboardClient({
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     status: {task.status} · workspaceId: {task.workspaceId}
                   </p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Deliverables (Scoped)
+          </h2>
+          <button
+            type="button"
+            onClick={() => {
+              void loadDeliverables("manual");
+            }}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            Load Deliverables
+          </button>
+        </div>
+
+        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          {deliverablesContextWorkspaceId
+            ? `API scoped to workspace: ${deliverablesContextWorkspaceId}`
+            : "Load deliverables to verify active workspace scoping."}
+        </p>
+
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          {canDeleteDeliverables
+            ? "Deliverable controls available (Owner/Admin delete, Owner/Admin/Contributor upload)."
+            : canUploadDeliverables
+              ? "Deliverable upload available. Delete is restricted to Owners/Admins."
+              : "Deliverable controls restricted by role."}
+        </p>
+
+        <form
+          onSubmit={handleUploadDeliverable}
+          className="mt-4 flex flex-col gap-3"
+        >
+          <input
+            type="file"
+            accept=".pdf,.png,.jpg,.jpeg,.txt,.md,.docx"
+            onChange={(event) =>
+              setDeliverableFile(event.target.files?.[0] ?? null)
+            }
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 file:mr-3 file:rounded file:border-0 file:bg-cyan-50 file:px-2 file:py-1 file:text-xs file:font-semibold file:text-cyan-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+          />
+
+          <select
+            value={deliverableTaskId}
+            onChange={(event) => setDeliverableTaskId(event.target.value)}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+          >
+            <option value="">Attach to no task</option>
+            {tasks.map((task) => (
+              <option key={task.id} value={task.id}>
+                {task.title}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="submit"
+            disabled={deliverablesSubmitting || !canUploadDeliverables}
+            className="self-start rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-600 disabled:opacity-60"
+          >
+            {deliverablesSubmitting ? "Uploading..." : "Upload Deliverable"}
+          </button>
+        </form>
+
+        <div className="mt-4 space-y-2">
+          {deliverables.length === 0 ? (
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              No deliverables loaded yet.
+            </p>
+          ) : (
+            deliverables.map((deliverable) => (
+              <div
+                key={deliverable.id}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700"
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {deliverable.filename}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      taskId: {deliverable.taskId ?? "none"} · workspaceId:{" "}
+                      {deliverable.workspaceId}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleDeleteDeliverable(deliverable);
+                    }}
+                    disabled={
+                      !canDeleteDeliverables ||
+                      deliverableDeletingId === deliverable.id
+                    }
+                    className="rounded-lg border border-red-300 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-950/30"
+                  >
+                    {deliverableDeletingId === deliverable.id
+                      ? "Deleting..."
+                      : "Delete"}
+                  </button>
                 </div>
               </div>
             ))

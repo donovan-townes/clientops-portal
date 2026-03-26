@@ -31,6 +31,13 @@ export default async function DashboardPage() {
       })
     : [];
 
+  const initialDeliverables = context.activeWorkspace
+    ? await prisma.deliverable.findMany({
+        where: { workspaceId: context.activeWorkspace.id },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
+
   const initialMembers = context.activeWorkspace
     ? await prisma.membership.findMany({
         where: { workspaceId: context.activeWorkspace.id },
@@ -76,6 +83,13 @@ export default async function DashboardPage() {
             dueAt: task.dueAt ? task.dueAt.toISOString() : null,
           }))}
           initialTasksContextWorkspaceId={context.activeWorkspace?.id ?? null}
+          initialDeliverables={initialDeliverables.map((deliverable) => ({
+            ...deliverable,
+            createdAt: deliverable.createdAt.toISOString(),
+          }))}
+          initialDeliverablesContextWorkspaceId={
+            context.activeWorkspace?.id ?? null
+          }
           initialMembers={initialMembers.map((membership) => ({
             id: membership.id,
             workspaceId: membership.workspaceId,
