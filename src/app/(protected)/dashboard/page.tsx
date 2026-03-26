@@ -136,58 +136,45 @@ export default async function DashboardPage() {
     : null;
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-4xl px-6 py-10">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Workspace Dashboard
-        </h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Manage your workspace context for tenant-scoped operations.
-        </p>
-      </div>
-
-      <div className="mt-8">
-        <WorkspaceDashboardClient
-          initialWorkspaces={context.workspaces}
-          initialActiveWorkspaceId={context.activeWorkspace?.id ?? null}
-          initialTasks={initialTasks.map((task) => ({
-            ...task,
-            dueAt: task.dueAt ? task.dueAt.toISOString() : null,
-          }))}
-          initialTasksContextWorkspaceId={context.activeWorkspace?.id ?? null}
-          initialSummary={initialSummary}
-          initialSummaryContextWorkspaceId={context.activeWorkspace?.id ?? null}
-          initialDeliverables={initialDeliverables.map((deliverable) => ({
-            ...deliverable,
-            createdAt: deliverable.createdAt.toISOString(),
-          }))}
-          initialDeliverablesContextWorkspaceId={
-            context.activeWorkspace?.id ?? null
-          }
-          initialMembers={initialMembers.map((membership) => ({
-            id: membership.id,
-            workspaceId: membership.workspaceId,
-            userId: membership.userId,
-            email: membership.user.email,
-            role: membership.role,
-            createdAt: membership.createdAt.toISOString(),
-          }))}
-          initialMembersContextWorkspaceId={context.activeWorkspace?.id ?? null}
-          initialActiveRole={initialActiveMembership?.role ?? null}
-          initialActivityEvents={initialActivityEvents.map((event) => ({
-            id: event.id,
-            workspaceId: event.workspaceId,
-            actorUserId: event.actorUserId,
-            actorEmail: event.actor.email,
-            type: event.type,
-            payloadJson: event.payloadJson,
-            createdAt: event.createdAt.toISOString(),
-          }))}
-          initialActivityEventsContextWorkspaceId={
-            context.activeWorkspace?.id ?? null
-          }
-        />
-      </div>
-    </main>
+    <WorkspaceDashboardClient
+      initialWorkspaces={context.workspaces}
+      initialActiveWorkspaceId={context.activeWorkspace?.id ?? null}
+      initialTasks={initialTasks.map((task) => ({
+        ...task,
+        dueAt: task.dueAt ? task.dueAt.toISOString() : null,
+      }))}
+      initialTasksContextWorkspaceId={context.activeWorkspace?.id ?? null}
+      initialSummary={initialSummary}
+      initialSummaryContextWorkspaceId={context.activeWorkspace?.id ?? null}
+      initialDeliverables={initialDeliverables.map((deliverable) => ({
+        ...deliverable,
+        createdAt: deliverable.createdAt.toISOString(),
+      }))}
+      initialDeliverablesContextWorkspaceId={
+        context.activeWorkspace?.id ?? null
+      }
+      initialMembers={initialMembers.map((membership) => ({
+        id: membership.id,
+        workspaceId: membership.workspaceId,
+        userId: membership.userId,
+        email: membership.user.email,
+        role: membership.role,
+        createdAt: membership.createdAt.toISOString(),
+      }))}
+      initialMembersContextWorkspaceId={context.activeWorkspace?.id ?? null}
+      initialActiveRole={initialActiveMembership?.role ?? null}
+      initialActivityEvents={initialActivityEvents.map((event) => ({
+        id: event.id,
+        workspaceId: event.workspaceId,
+        actorUserId: event.actorUserId,
+        actorEmail: event.actor.email,
+        type: event.type,
+        payloadJson: event.payloadJson,
+        createdAt: event.createdAt.toISOString(),
+      }))}
+      initialActivityEventsContextWorkspaceId={
+        context.activeWorkspace?.id ?? null
+      }
+    />
   );
 }

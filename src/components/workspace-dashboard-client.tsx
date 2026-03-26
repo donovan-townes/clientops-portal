@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useState } from "react";
 
@@ -144,31 +144,31 @@ export default function WorkspaceDashboardClient({
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("CONTRIBUTOR");
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [tasksContextWorkspaceId, setTasksContextWorkspaceId] = useState<
-    string | null
-  >(initialTasksContextWorkspaceId);
+  const [, setTasksContextWorkspaceId] = useState<string | null>(
+    initialTasksContextWorkspaceId,
+  );
   const [summary, setSummary] = useState<DashboardSummary | null>(
     initialSummary,
   );
-  const [summaryContextWorkspaceId, setSummaryContextWorkspaceId] = useState<
-    string | null
-  >(initialSummaryContextWorkspaceId);
+  const [, setSummaryContextWorkspaceId] = useState<string | null>(
+    initialSummaryContextWorkspaceId,
+  );
   const [deliverables, setDeliverables] =
     useState<Deliverable[]>(initialDeliverables);
-  const [deliverablesContextWorkspaceId, setDeliverablesContextWorkspaceId] =
-    useState<string | null>(initialDeliverablesContextWorkspaceId);
+  const [, setDeliverablesContextWorkspaceId] = useState<string | null>(
+    initialDeliverablesContextWorkspaceId,
+  );
   const [members, setMembers] = useState<Member[]>(initialMembers);
-  const [membersContextWorkspaceId, setMembersContextWorkspaceId] = useState<
-    string | null
-  >(initialMembersContextWorkspaceId);
+  const [, setMembersContextWorkspaceId] = useState<string | null>(
+    initialMembersContextWorkspaceId,
+  );
   const [activeRole, setActiveRole] = useState<Role | null>(initialActiveRole);
   const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>(
     initialActivityEvents,
   );
-  const [
-    activityEventsContextWorkspaceId,
-    setActivityEventsContextWorkspaceId,
-  ] = useState<string | null>(initialActivityEventsContextWorkspaceId);
+  const [, setActivityEventsContextWorkspaceId] = useState<string | null>(
+    initialActivityEventsContextWorkspaceId,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [tasksSubmitting, setTasksSubmitting] = useState(false);
   const [deliverablesSubmitting, setDeliverablesSubmitting] = useState(false);
@@ -190,6 +190,7 @@ export default function WorkspaceDashboardClient({
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
   const [activity, setActivity] = useState<ActivityItem[]>(() => {
     const initialWorkspaceName =
       initialWorkspaces.find(
@@ -284,6 +285,7 @@ export default function WorkspaceDashboardClient({
 
     setNewWorkspaceName("");
     setSubmitting(false);
+    setShowCreateWorkspace(false);
     if (data.workspace?.name) {
       pushActivity(`Workspace created: ${data.workspace.name}`);
     }
@@ -646,7 +648,7 @@ export default function WorkspaceDashboardClient({
     await handleUpdateTask(
       task.id,
       { status: nextStatus },
-      `Task status changed in ${task.workspaceId}: ${task.title} (${task.status} → ${nextStatus})`,
+      `Task status changed in ${task.workspaceId}: ${task.title} (${task.status} â†’ ${nextStatus})`,
     );
   };
 
@@ -786,563 +788,596 @@ export default function WorkspaceDashboardClient({
   const canDeleteDeliverables =
     activeRole === "OWNER" || activeRole === "ADMIN";
 
+  const roleBadgeClass = (role: Role): string => {
+    const base = "rounded-full px-2 py-0.5 text-xs font-semibold";
+    if (role === "OWNER")
+      return `${base} bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300`;
+    if (role === "ADMIN")
+      return `${base} bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300`;
+    if (role === "CONTRIBUTOR")
+      return `${base} bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300`;
+    return `${base} bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300`;
+  };
+
+  const taskStatusBadgeClass = (status: TaskStatus): string => {
+    if (status === "TODO")
+      return "rounded-full px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
+    if (status === "IN_PROGRESS")
+      return "rounded-full px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300";
+    return "rounded-full px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300";
+  };
+
   return (
-    <div className="space-y-6">
-      <section className="rounded-xl border border-cyan-200 bg-cyan-50 p-4 dark:border-cyan-900/40 dark:bg-cyan-950/20">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-cyan-900 dark:text-cyan-200">
-            Activity (Read-Only)
-          </h2>
-          <span className="text-xs text-cyan-700 dark:text-cyan-300">
-            Session notifications
+    <div className="bg-gray-50 dark:bg-gray-950">
+      {/* Session notification strip */}
+      <div className="border-b border-cyan-200/60 bg-cyan-50 px-4 py-2 dark:border-cyan-900/30 dark:bg-cyan-950/20">
+        <div className="mx-auto flex max-w-7xl items-center gap-3 overflow-x-auto">
+          <span className="shrink-0 text-xs font-semibold text-cyan-700 dark:text-cyan-400">
+            Session:
           </span>
-        </div>
-        <div className="mt-3 space-y-1">
-          {activity.map((item) => (
-            <p
-              key={item.id}
-              className="text-xs text-cyan-800 dark:text-cyan-200"
-            >
-              • {item.message}
-            </p>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Active Workspace
-        </h2>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          {activeWorkspaceName
-            ? `Current context: ${activeWorkspaceName}`
-            : "No active workspace selected yet."}
-        </p>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          Current role: {activeRole ?? "Unknown"}
-        </p>
-      </section>
-
-      <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Summary (Scoped)
-          </h2>
-          <button
-            type="button"
-            onClick={() => {
-              void loadSummary("manual");
-            }}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-          >
-            Load Summary
-          </button>
-        </div>
-
-        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          {summaryContextWorkspaceId
-            ? `API scoped to workspace: ${summaryContextWorkspaceId}`
-            : "Load summary to verify active workspace dashboard scope."}
-        </p>
-
-        {!summary ? (
-          <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-            No summary loaded yet.
-          </p>
-        ) : (
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Tasks</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                {summary.tasksTotal}
-              </p>
-            </div>
-            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-              <p className="text-xs text-gray-500 dark:text-gray-400">TODO</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                {summary.tasksTodo}
-              </p>
-            </div>
-            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                IN_PROGRESS
-              </p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                {summary.tasksInProgress}
-              </p>
-            </div>
-            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-              <p className="text-xs text-gray-500 dark:text-gray-400">DONE</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                {summary.tasksDone}
-              </p>
-            </div>
-            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Deliverables
-              </p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                {summary.deliverablesTotal}
-              </p>
-            </div>
-            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Members
-              </p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                {summary.membersTotal}
-              </p>
-            </div>
-            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Activity Events
-              </p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                {summary.activityEventsTotal}
-              </p>
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Switch Workspace
-        </h2>
-        <select
-          value={activeWorkspaceId ?? ""}
-          onChange={handleSwitchWorkspace}
-          className="mt-3 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-        >
-          <option value="" disabled>
-            Select workspace
-          </option>
-          {workspaces.map((workspace) => (
-            <option key={workspace.id} value={workspace.id}>
-              {workspace.name}
-            </option>
-          ))}
-        </select>
-      </section>
-
-      <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Create Workspace
-        </h2>
-        <form
-          onSubmit={handleCreateWorkspace}
-          className="mt-3 flex flex-col gap-3 sm:flex-row"
-        >
-          <input
-            value={newWorkspaceName}
-            onChange={(event) => setNewWorkspaceName(event.target.value)}
-            placeholder="Workspace name"
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-          />
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-60"
-          >
-            {submitting ? "Creating..." : "Create"}
-          </button>
-        </form>
-      </section>
-
-      <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Members (Scoped)
-          </h2>
-          <button
-            type="button"
-            onClick={() => {
-              void loadMembers("manual");
-            }}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-          >
-            Load Members
-          </button>
-        </div>
-
-        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          {membersContextWorkspaceId
-            ? `API scoped to workspace: ${membersContextWorkspaceId}`
-            : "Load members to verify workspace membership scope."}
-        </p>
-
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          {activeRole === "OWNER" || activeRole === "ADMIN"
-            ? "Invite actions available (Owner/Admin)."
-            : "Invite actions restricted to Owners/Admins."}
-        </p>
-
-        <div className="mt-4 space-y-2">
-          {members.length === 0 ? (
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              No members loaded yet.
-            </p>
-          ) : (
-            members.map((member) => (
-              <div
-                key={member.id}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700"
+          <div className="flex items-center gap-4">
+            {activity.slice(0, 3).map((item) => (
+              <p
+                key={item.id}
+                className="shrink-0 text-xs text-cyan-700 dark:text-cyan-300"
               >
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {member.email}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  role: {member.role}
-                </p>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      <section id="invite" className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Invite Member
-        </h2>
-
-        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          {canInvite
-            ? "Owner/Admin can issue invite tokens from the active workspace context."
-            : "Invite creation is restricted to Owners/Admins."}
-        </p>
-
-        <form
-          onSubmit={handleCreateInvite}
-          className="mt-4 flex flex-col gap-3 lg:flex-row"
-        >
-          <input
-            value={inviteEmail}
-            onChange={(event) => setInviteEmail(event.target.value)}
-            placeholder="member@company.com"
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-          />
-
-          <select
-            value={inviteRole}
-            onChange={(event) => setInviteRole(event.target.value as Role)}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white lg:w-52"
-          >
-            <option value="OWNER">OWNER</option>
-            <option value="ADMIN">ADMIN</option>
-            <option value="CONTRIBUTOR">CONTRIBUTOR</option>
-            <option value="VIEWER">VIEWER</option>
-          </select>
-
-          <button
-            type="submit"
-            disabled={inviteSubmitting || !canInvite}
-            className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-60"
-          >
-            {inviteSubmitting ? "Inviting..." : "Create Invite"}
-          </button>
-        </form>
-
-        {inviteMessage ? (
-          <div className="mt-3 space-y-1">
-            <p className="text-xs text-emerald-700 dark:text-emerald-400">
-              {inviteMessage}
-            </p>
-            {inviteLink ? (
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                Share this acceptance link with the invited user: {inviteLink}
+                {item.message}
               </p>
-            ) : null}
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              Invited user flow: open the link, sign in, then click Accept
-              invite.
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Page header & workspace control bar */}
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+              Workspace Dashboard
+            </h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Tenant-scoped operations &amp; client management.
             </p>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:items-end">
+            <div className="flex items-center gap-2">
+              {activeWorkspaceName ? (
+                <>
+                  <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                    {activeWorkspaceName}
+                  </span>
+                  {activeRole ? (
+                    <span className={roleBadgeClass(activeRole)}>
+                      {activeRole}
+                    </span>
+                  ) : null}
+                </>
+              ) : (
+                <span className="text-sm text-gray-400 dark:text-gray-500">
+                  No workspace selected
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {workspaces.length > 0 ? (
+                <select
+                  value={activeWorkspaceId ?? ""}
+                  onChange={handleSwitchWorkspace}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                >
+                  <option value="" disabled>
+                    Switch workspace
+                  </option>
+                  {workspaces.map((workspace) => (
+                    <option key={workspace.id} value={workspace.id}>
+                      {workspace.name}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setShowCreateWorkspace((v) => !v)}
+                className="rounded-lg border border-dashed border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:border-gray-400 hover:text-gray-900 dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-500 dark:hover:text-white"
+              >
+                {showCreateWorkspace ? "Cancel" : "+ New Workspace"}
+              </button>
+            </div>
+
+            {showCreateWorkspace ? (
+              <form
+                onSubmit={handleCreateWorkspace}
+                className="flex items-center gap-2"
+              >
+                <input
+                  value={newWorkspaceName}
+                  onChange={(event) => setNewWorkspaceName(event.target.value)}
+                  placeholder="Workspace name"
+                  autoFocus
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                />
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-60"
+                >
+                  {submitting ? "Creatingâ€¦" : "Create"}
+                </button>
+              </form>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Error banner */}
+        {error ? (
+          <div className="mb-6 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-400">
+            {error}
           </div>
         ) : null}
-      </section>
 
-      <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Tasks (Scoped)
-          </h2>
-          <button
-            type="button"
-            onClick={() => {
-              void loadTasks("manual");
-            }}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-          >
-            Load Tasks
-          </button>
-        </div>
-
-        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          {tasksContextWorkspaceId
-            ? `API scoped to workspace: ${tasksContextWorkspaceId}`
-            : "Load tasks to verify active workspace scoping."}
-        </p>
-
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          {canDeleteTasks
-            ? "Task lifecycle controls available (Owner/Admin/Contributor edit, Owner/Admin delete)."
-            : canEditTasks
-              ? "Task edit/status controls available. Delete is restricted to Owners/Admins."
-              : "Task lifecycle controls restricted by role."}
-        </p>
-
-        <form
-          onSubmit={handleCreateTask}
-          className="mt-4 flex flex-col gap-3 sm:flex-row"
-        >
-          <input
-            value={newTaskTitle}
-            onChange={(event) => setNewTaskTitle(event.target.value)}
-            placeholder="New task title"
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-          />
-          <button
-            type="submit"
-            disabled={tasksSubmitting}
-            className="rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-600 disabled:opacity-60"
-          >
-            {tasksSubmitting ? "Creating..." : "Create Task"}
-          </button>
-        </form>
-
-        <div className="mt-4 space-y-2">
-          {tasks.length === 0 ? (
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              No tasks loaded yet.
+        {/* KPI Summary bar */}
+        <div className="mb-8 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Workspace Overview
+            </h2>
+            <button
+              type="button"
+              onClick={() => {
+                void loadSummary("manual");
+              }}
+              className="text-xs text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+            >
+              â†» Refresh
+            </button>
+          </div>
+          {!summary ? (
+            <p className="text-sm text-gray-400 dark:text-gray-500">
+              {activeWorkspaceId
+                ? "Loading overviewâ€¦"
+                : "Select or create a workspace to see the overview."}
             </p>
           ) : (
-            tasks.map((task) => (
-              <div
-                key={task.id}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700"
-              >
-                <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+              <div className="rounded-lg bg-blue-50 p-3 dark:bg-blue-950/30">
+                <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                  Tasks
+                </p>
+                <p className="mt-1 text-2xl font-bold text-blue-900 dark:text-blue-100">
+                  {summary.tasksTotal}
+                </p>
+              </div>
+              <div className="rounded-lg bg-slate-100 p-3 dark:bg-slate-800/40">
+                <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                  To Do
+                </p>
+                <p className="mt-1 text-2xl font-bold text-slate-800 dark:text-slate-100">
+                  {summary.tasksTodo}
+                </p>
+              </div>
+              <div className="rounded-lg bg-amber-50 p-3 dark:bg-amber-950/30">
+                <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                  In Progress
+                </p>
+                <p className="mt-1 text-2xl font-bold text-amber-900 dark:text-amber-100">
+                  {summary.tasksInProgress}
+                </p>
+              </div>
+              <div className="rounded-lg bg-emerald-50 p-3 dark:bg-emerald-950/30">
+                <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  Done
+                </p>
+                <p className="mt-1 text-2xl font-bold text-emerald-900 dark:text-emerald-100">
+                  {summary.tasksDone}
+                </p>
+              </div>
+              <div className="rounded-lg bg-violet-50 p-3 dark:bg-violet-950/30">
+                <p className="text-xs font-medium text-violet-600 dark:text-violet-400">
+                  Files
+                </p>
+                <p className="mt-1 text-2xl font-bold text-violet-900 dark:text-violet-100">
+                  {summary.deliverablesTotal}
+                </p>
+              </div>
+              <div className="rounded-lg bg-teal-50 p-3 dark:bg-teal-950/30">
+                <p className="text-xs font-medium text-teal-600 dark:text-teal-400">
+                  Members
+                </p>
+                <p className="mt-1 text-2xl font-bold text-teal-900 dark:text-teal-100">
+                  {summary.membersTotal}
+                </p>
+              </div>
+              <div className="rounded-lg bg-cyan-50 p-3 dark:bg-cyan-950/30">
+                <p className="text-xs font-medium text-cyan-600 dark:text-cyan-400">
+                  Events
+                </p>
+                <p className="mt-1 text-2xl font-bold text-cyan-900 dark:text-cyan-100">
+                  {summary.activityEventsTotal}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Main 2-column layout */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Primary column â€” Tasks + Deliverables */}
+          <div className="space-y-6 lg:col-span-2">
+            {/* Tasks */}
+            <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                  Tasks
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void loadTasks("manual");
+                  }}
+                  className="text-xs text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+                >
+                  â†» Refresh
+                </button>
+              </div>
+
+              {canEditTasks ? (
+                <form onSubmit={handleCreateTask} className="mt-4 flex gap-2">
                   <input
-                    value={taskTitleDrafts[task.id] ?? task.title}
-                    onChange={(event) =>
-                      setTaskTitleDrafts((previous) => ({
-                        ...previous,
-                        [task.id]: event.target.value,
-                      }))
-                    }
-                    disabled={!canEditTasks || taskUpdatingId === task.id}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    value={newTaskTitle}
+                    onChange={(event) => setNewTaskTitle(event.target.value)}
+                    placeholder="New task titleâ€¦"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                   />
+                  <button
+                    type="submit"
+                    disabled={tasksSubmitting}
+                    className="shrink-0 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-600 disabled:opacity-60"
+                  >
+                    {tasksSubmitting ? "Addingâ€¦" : "Add"}
+                  </button>
+                </form>
+              ) : (
+                <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
+                  Task creation requires Contributor or higher.
+                </p>
+              )}
 
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="mt-4 space-y-2">
+                {tasks.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-gray-400 dark:text-gray-500">
+                    No tasks yet.{canEditTasks ? " Add one above." : ""}
+                  </p>
+                ) : (
+                  tasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-3 dark:border-gray-800 dark:bg-gray-800/40"
+                    >
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <input
+                          value={taskTitleDrafts[task.id] ?? task.title}
+                          onChange={(event) =>
+                            setTaskTitleDrafts((previous) => ({
+                              ...previous,
+                              [task.id]: event.target.value,
+                            }))
+                          }
+                          disabled={
+                            !canEditTasks || taskUpdatingId === task.id
+                          }
+                          className="min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                        />
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <select
+                            value={task.status}
+                            onChange={(event) => {
+                              void handleTaskStatusChange(
+                                task,
+                                event.target.value as TaskStatus,
+                              );
+                            }}
+                            disabled={
+                              !canEditTasks || taskUpdatingId === task.id
+                            }
+                            className="rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                          >
+                            <option value="TODO">To Do</option>
+                            <option value="IN_PROGRESS">In Progress</option>
+                            <option value="DONE">Done</option>
+                          </select>
+                          {canEditTasks ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void handleSaveTaskTitle(task);
+                              }}
+                              disabled={taskUpdatingId === task.id}
+                              className="rounded-md border border-cyan-200 px-2.5 py-1.5 text-xs font-medium text-cyan-700 hover:bg-cyan-50 disabled:opacity-60 dark:border-cyan-900/40 dark:text-cyan-400 dark:hover:bg-cyan-950/30"
+                            >
+                              {taskUpdatingId === task.id ? "â€¦" : "Save"}
+                            </button>
+                          ) : null}
+                          {canDeleteTasks ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void handleDeleteTask(task);
+                              }}
+                              disabled={taskDeletingId === task.id}
+                              className="rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-60 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-950/30"
+                            >
+                              {taskDeletingId === task.id ? "â€¦" : "Delete"}
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <span className={taskStatusBadgeClass(task.status)}>
+                          {task.status === "IN_PROGRESS"
+                            ? "In Progress"
+                            : task.status === "TODO"
+                              ? "To Do"
+                              : "Done"}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
+            {/* Deliverables */}
+            <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                  Deliverables
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void loadDeliverables("manual");
+                  }}
+                  className="text-xs text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+                >
+                  â†» Refresh
+                </button>
+              </div>
+
+              {canUploadDeliverables ? (
+                <form
+                  onSubmit={handleUploadDeliverable}
+                  className="mt-4 flex flex-col gap-3"
+                >
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.txt,.md,.docx"
+                    onChange={(event) =>
+                      setDeliverableFile(event.target.files?.[0] ?? null)
+                    }
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 file:mr-3 file:rounded file:border-0 file:bg-cyan-50 file:px-2 file:py-1 file:text-xs file:font-semibold file:text-cyan-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  />
+                  <div className="flex gap-2">
                     <select
-                      value={task.status}
-                      onChange={(event) => {
-                        void handleTaskStatusChange(
-                          task,
-                          event.target.value as TaskStatus,
-                        );
-                      }}
-                      disabled={!canEditTasks || taskUpdatingId === task.id}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-white sm:w-44"
+                      value={deliverableTaskId}
+                      onChange={(event) =>
+                        setDeliverableTaskId(event.target.value)
+                      }
+                      className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                     >
-                      <option value="TODO">TODO</option>
-                      <option value="IN_PROGRESS">IN_PROGRESS</option>
-                      <option value="DONE">DONE</option>
+                      <option value="">Attach to no task</option>
+                      {tasks.map((task) => (
+                        <option key={task.id} value={task.id}>
+                          {task.title}
+                        </option>
+                      ))}
                     </select>
-
                     <button
-                      type="button"
-                      onClick={() => {
-                        void handleSaveTaskTitle(task);
-                      }}
-                      disabled={!canEditTasks || taskUpdatingId === task.id}
-                      className="rounded-lg border border-cyan-300 px-3 py-1 text-xs font-semibold text-cyan-700 hover:bg-cyan-50 disabled:opacity-60 dark:border-cyan-900/50 dark:text-cyan-300 dark:hover:bg-cyan-950/30"
+                      type="submit"
+                      disabled={deliverablesSubmitting}
+                      className="shrink-0 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-600 disabled:opacity-60"
                     >
-                      {taskUpdatingId === task.id ? "Saving..." : "Save"}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void handleDeleteTask(task);
-                      }}
-                      disabled={taskDeletingId === task.id}
-                      className="rounded-lg border border-red-300 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-950/30"
-                    >
-                      {taskDeletingId === task.id ? "Deleting..." : "Delete"}
+                      {deliverablesSubmitting ? "Uploadingâ€¦" : "Upload"}
                     </button>
                   </div>
+                </form>
+              ) : (
+                <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
+                  File upload requires Contributor or higher.
+                </p>
+              )}
 
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    status: {task.status} · workspaceId: {task.workspaceId}
+              <div className="mt-4 space-y-2">
+                {deliverables.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-gray-400 dark:text-gray-500">
+                    No files uploaded yet.
+                  </p>
+                ) : (
+                  deliverables.map((deliverable) => (
+                    <div
+                      key={deliverable.id}
+                      className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2.5 dark:border-gray-800 dark:bg-gray-800/40"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                          {deliverable.filename}
+                        </p>
+                        {deliverable.taskId ? (
+                          <p className="text-xs text-gray-400 dark:text-gray-500">
+                            Linked to task
+                          </p>
+                        ) : null}
+                      </div>
+                      {canDeleteDeliverables ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void handleDeleteDeliverable(deliverable);
+                          }}
+                          disabled={deliverableDeletingId === deliverable.id}
+                          className="ml-3 shrink-0 rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-60 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-950/30"
+                        >
+                          {deliverableDeletingId === deliverable.id
+                            ? "â€¦"
+                            : "Delete"}
+                        </button>
+                      ) : null}
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          </div>
+
+          {/* Sidebar â€” Team + Invite + Activity */}
+          <div className="space-y-6 lg:col-span-1">
+            {/* Team members */}
+            <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                  Team
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void loadMembers("manual");
+                  }}
+                  className="text-xs text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+                >
+                  â†» Refresh
+                </button>
+              </div>
+              <div className="mt-3 space-y-1">
+                {members.length === 0 ? (
+                  <p className="py-2 text-sm text-gray-400 dark:text-gray-500">
+                    No members loaded.
+                  </p>
+                ) : (
+                  members.map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                    >
+                      <p className="min-w-0 truncate text-sm text-gray-800 dark:text-gray-200">
+                        {member.email}
+                      </p>
+                      <span
+                        className={`ml-2 shrink-0 ${roleBadgeClass(member.role)}`}
+                      >
+                        {member.role}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
+            {/* Invite member */}
+            <section
+              id="invite"
+              className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+            >
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                Invite Member
+              </h2>
+              {canInvite ? (
+                <form
+                  onSubmit={handleCreateInvite}
+                  className="mt-3 flex flex-col gap-2"
+                >
+                  <input
+                    value={inviteEmail}
+                    onChange={(event) => setInviteEmail(event.target.value)}
+                    placeholder="member@company.com"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  />
+                  <div className="flex gap-2">
+                    <select
+                      value={inviteRole}
+                      onChange={(event) =>
+                        setInviteRole(event.target.value as Role)
+                      }
+                      className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    >
+                      <option value="OWNER">Owner</option>
+                      <option value="ADMIN">Admin</option>
+                      <option value="CONTRIBUTOR">Contributor</option>
+                      <option value="VIEWER">Viewer</option>
+                    </select>
+                    <button
+                      type="submit"
+                      disabled={inviteSubmitting}
+                      className="shrink-0 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-60"
+                    >
+                      {inviteSubmitting ? "â€¦" : "Invite"}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+                  Requires Owner or Admin role.
+                </p>
+              )}
+              {inviteMessage ? (
+                <div className="mt-3 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-950/20">
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                    {inviteMessage}
+                  </p>
+                  {inviteLink ? (
+                    <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                      Share link: {inviteLink}
+                    </p>
+                  ) : null}
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Invited user: open the link, sign in, then accept.
                   </p>
                 </div>
+              ) : null}
+            </section>
+
+            {/* Activity feed */}
+            <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                  Activity
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void loadActivityEvents("manual");
+                  }}
+                  className="text-xs text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+                >
+                  â†» Refresh
+                </button>
               </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Deliverables (Scoped)
-          </h2>
-          <button
-            type="button"
-            onClick={() => {
-              void loadDeliverables("manual");
-            }}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-          >
-            Load Deliverables
-          </button>
-        </div>
-
-        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          {deliverablesContextWorkspaceId
-            ? `API scoped to workspace: ${deliverablesContextWorkspaceId}`
-            : "Load deliverables to verify active workspace scoping."}
-        </p>
-
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          {canDeleteDeliverables
-            ? "Deliverable controls available (Owner/Admin delete, Owner/Admin/Contributor upload)."
-            : canUploadDeliverables
-              ? "Deliverable upload available. Delete is restricted to Owners/Admins."
-              : "Deliverable controls restricted by role."}
-        </p>
-
-        <form
-          onSubmit={handleUploadDeliverable}
-          className="mt-4 flex flex-col gap-3"
-        >
-          <input
-            type="file"
-            accept=".pdf,.png,.jpg,.jpeg,.txt,.md,.docx"
-            onChange={(event) =>
-              setDeliverableFile(event.target.files?.[0] ?? null)
-            }
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 file:mr-3 file:rounded file:border-0 file:bg-cyan-50 file:px-2 file:py-1 file:text-xs file:font-semibold file:text-cyan-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-          />
-
-          <select
-            value={deliverableTaskId}
-            onChange={(event) => setDeliverableTaskId(event.target.value)}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-          >
-            <option value="">Attach to no task</option>
-            {tasks.map((task) => (
-              <option key={task.id} value={task.id}>
-                {task.title}
-              </option>
-            ))}
-          </select>
-
-          <button
-            type="submit"
-            disabled={deliverablesSubmitting || !canUploadDeliverables}
-            className="self-start rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-600 disabled:opacity-60"
-          >
-            {deliverablesSubmitting ? "Uploading..." : "Upload Deliverable"}
-          </button>
-        </form>
-
-        <div className="mt-4 space-y-2">
-          {deliverables.length === 0 ? (
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              No deliverables loaded yet.
-            </p>
-          ) : (
-            deliverables.map((deliverable) => (
-              <div
-                key={deliverable.id}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700"
-              >
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {deliverable.filename}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      taskId: {deliverable.taskId ?? "none"} · workspaceId:{" "}
-                      {deliverable.workspaceId}
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void handleDeleteDeliverable(deliverable);
-                    }}
-                    disabled={
-                      !canDeleteDeliverables ||
-                      deliverableDeletingId === deliverable.id
-                    }
-                    className="rounded-lg border border-red-300 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-950/30"
-                  >
-                    {deliverableDeletingId === deliverable.id
-                      ? "Deleting..."
-                      : "Delete"}
-                  </button>
-                </div>
+              <div className="mt-3 space-y-2">
+                {activityEvents.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-gray-400 dark:text-gray-500">
+                    No events yet.
+                  </p>
+                ) : (
+                  activityEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      className="rounded-lg border border-gray-100 px-3 py-2.5 dark:border-gray-800"
+                    >
+                      <p className="text-xs font-medium text-gray-800 dark:text-gray-200">
+                        {event.type}
+                      </p>
+                      <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+                        {event.actorEmail} &middot;{" "}
+                        {new Date(event.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  ))
+                )}
               </div>
-            ))
-          )}
+            </section>
+          </div>
         </div>
-      </section>
-
-      <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Activity Feed (Scoped)
-          </h2>
-          <button
-            type="button"
-            onClick={() => {
-              void loadActivityEvents("manual");
-            }}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-          >
-            Load Activity
-          </button>
-        </div>
-
-        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          {activityEventsContextWorkspaceId
-            ? `API scoped to workspace: ${activityEventsContextWorkspaceId}`
-            : "Load activity to verify workspace audit log scope."}
-        </p>
-
-        <div className="mt-4 space-y-2">
-          {activityEvents.length === 0 ? (
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              No activity events loaded yet.
-            </p>
-          ) : (
-            activityEvents.map((event) => (
-              <div
-                key={event.id}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700"
-              >
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {event.type}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {event.actorEmail} &middot;{" "}
-                  {new Date(event.createdAt).toLocaleString()}
-                </p>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      {error ? (
-        <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-400">
-          {error}
-        </p>
-      ) : null}
+      </div>
     </div>
   );
 }
