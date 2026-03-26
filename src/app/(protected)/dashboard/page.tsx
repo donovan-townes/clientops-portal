@@ -7,6 +7,16 @@ import { prisma } from "@/lib/prisma";
 import { ACTIVE_WORKSPACE_COOKIE_NAME } from "@/lib/workspace-context";
 import { resolveActiveWorkspaceForUser } from "@/lib/workspaces";
 
+type DashboardSummary = {
+  tasksTotal: number;
+  tasksTodo: number;
+  tasksInProgress: number;
+  tasksDone: number;
+  deliverablesTotal: number;
+  membersTotal: number;
+  activityEventsTotal: number;
+};
+
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
@@ -30,6 +40,59 @@ export default async function DashboardPage() {
         orderBy: { createdAt: "desc" },
       })
     : [];
+
+  let initialSummary: DashboardSummary | null = null;
+
+  if (context.activeWorkspace) {
+    const [
+      tasksTotal,
+      tasksTodo,
+      tasksInProgress,
+      tasksDone,
+      deliverablesTotal,
+      membersTotal,
+      activityEventsTotal,
+    ] = await Promise.all([
+      prisma.task.count({ where: { workspaceId: context.activeWorkspace.id } }),
+      prisma.task.count({
+        where: {
+          workspaceId: context.activeWorkspace.id,
+          status: "TODO",
+        },
+      }),
+      prisma.task.count({
+        where: {
+          workspaceId: context.activeWorkspace.id,
+          status: "IN_PROGRESS",
+        },
+      }),
+      prisma.task.count({
+        where: {
+          workspaceId: context.activeWorkspace.id,
+          status: "DONE",
+        },
+      }),
+      prisma.deliverable.count({
+        where: { workspaceId: context.activeWorkspace.id },
+      }),
+      prisma.membership.count({
+        where: { workspaceId: context.activeWorkspace.id },
+      }),
+      prisma.activityEvent.count({
+        where: { workspaceId: context.activeWorkspace.id },
+      }),
+    ]);
+
+    initialSummary = {
+      tasksTotal,
+      tasksTodo,
+      tasksInProgress,
+      tasksDone,
+      deliverablesTotal,
+      membersTotal,
+      activityEventsTotal,
+    };
+  }
 
   const initialDeliverables = context.activeWorkspace
     ? await prisma.deliverable.findMany({
@@ -92,6 +155,8 @@ export default async function DashboardPage() {
             dueAt: task.dueAt ? task.dueAt.toISOString() : null,
           }))}
           initialTasksContextWorkspaceId={context.activeWorkspace?.id ?? null}
+          initialSummary={initialSummary}
+          initialSummaryContextWorkspaceId={context.activeWorkspace?.id ?? null}
           initialDeliverables={initialDeliverables.map((deliverable) => ({
             ...deliverable,
             createdAt: deliverable.createdAt.toISOString(),
@@ -108,18 +173,20 @@ export default async function DashboardPage() {
             createdAt: membership.createdAt.toISOString(),
           }))}
           initialMembersContextWorkspaceId={context.activeWorkspace?.id ?? null}
-          initialActiveRole={initialActiveMembership?.role ?? null}            initialActivityEvents={initialActivityEvents.map((event) => ({
-              id: event.id,
-              workspaceId: event.workspaceId,
-              actorUserId: event.actorUserId,
-              actorEmail: event.actor.email,
-              type: event.type,
-              payloadJson: event.payloadJson,
-              createdAt: event.createdAt.toISOString(),
-            }))}
-            initialActivityEventsContextWorkspaceId={
-              context.activeWorkspace?.id ?? null
-            }        />
+          initialActiveRole={initialActiveMembership?.role ?? null}
+          initialActivityEvents={initialActivityEvents.map((event) => ({
+            id: event.id,
+            workspaceId: event.workspaceId,
+            actorUserId: event.actorUserId,
+            actorEmail: event.actor.email,
+            type: event.type,
+            payloadJson: event.payloadJson,
+            createdAt: event.createdAt.toISOString(),
+          }))}
+          initialActivityEventsContextWorkspaceId={
+            context.activeWorkspace?.id ?? null
+          }
+        />
       </div>
     </main>
   );

@@ -35,6 +35,12 @@ export default async function AppHeader() {
               >
                 Dashboard
               </Link>
+              <Link
+                href="/dashboard#invite"
+                className="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+              >
+                Invite
+              </Link>
               <div className="hidden rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 md:block dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
                 Signed in as {session.user.email}
               </div>

@@ -43,6 +43,21 @@ type DeliverablesResponse = {
   activeWorkspaceId: string;
 };
 
+type DashboardSummary = {
+  tasksTotal: number;
+  tasksTodo: number;
+  tasksInProgress: number;
+  tasksDone: number;
+  deliverablesTotal: number;
+  membersTotal: number;
+  activityEventsTotal: number;
+};
+
+type DashboardSummaryResponse = {
+  activeWorkspaceId: string;
+  summary: DashboardSummary;
+};
+
 type ActivityItem = {
   id: string;
   message: string;
@@ -94,6 +109,8 @@ type WorkspaceDashboardClientProps = {
   initialActiveWorkspaceId: string | null;
   initialTasks: Task[];
   initialTasksContextWorkspaceId: string | null;
+  initialSummary: DashboardSummary | null;
+  initialSummaryContextWorkspaceId: string | null;
   initialDeliverables: Deliverable[];
   initialDeliverablesContextWorkspaceId: string | null;
   initialMembers: Member[];
@@ -108,6 +125,8 @@ export default function WorkspaceDashboardClient({
   initialActiveWorkspaceId,
   initialTasks,
   initialTasksContextWorkspaceId,
+  initialSummary,
+  initialSummaryContextWorkspaceId,
   initialDeliverables,
   initialDeliverablesContextWorkspaceId,
   initialMembers,
@@ -128,6 +147,12 @@ export default function WorkspaceDashboardClient({
   const [tasksContextWorkspaceId, setTasksContextWorkspaceId] = useState<
     string | null
   >(initialTasksContextWorkspaceId);
+  const [summary, setSummary] = useState<DashboardSummary | null>(
+    initialSummary,
+  );
+  const [summaryContextWorkspaceId, setSummaryContextWorkspaceId] = useState<
+    string | null
+  >(initialSummaryContextWorkspaceId);
   const [deliverables, setDeliverables] =
     useState<Deliverable[]>(initialDeliverables);
   const [deliverablesContextWorkspaceId, setDeliverablesContextWorkspaceId] =
@@ -140,8 +165,10 @@ export default function WorkspaceDashboardClient({
   const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>(
     initialActivityEvents,
   );
-  const [activityEventsContextWorkspaceId, setActivityEventsContextWorkspaceId] =
-    useState<string | null>(initialActivityEventsContextWorkspaceId);
+  const [
+    activityEventsContextWorkspaceId,
+    setActivityEventsContextWorkspaceId,
+  ] = useState<string | null>(initialActivityEventsContextWorkspaceId);
   const [submitting, setSubmitting] = useState(false);
   const [tasksSubmitting, setTasksSubmitting] = useState(false);
   const [deliverablesSubmitting, setDeliverablesSubmitting] = useState(false);
@@ -212,6 +239,8 @@ export default function WorkspaceDashboardClient({
     if (!data.activeWorkspaceId) {
       setTasks([]);
       setTasksContextWorkspaceId(null);
+      setSummary(null);
+      setSummaryContextWorkspaceId(null);
       setDeliverables([]);
       setDeliverablesContextWorkspaceId(null);
       setMembers([]);
@@ -259,11 +288,43 @@ export default function WorkspaceDashboardClient({
       pushActivity(`Workspace created: ${data.workspace.name}`);
     }
     await refreshContext();
+    await loadSummary("auto");
     await loadTasks("auto");
     await loadDeliverables("auto");
     await loadMembers("auto");
     await loadActivityEvents("auto");
   };
+
+  const loadSummary = useCallback(
+    async (mode: "manual" | "auto" = "manual") => {
+      setError(null);
+
+      const response = await fetch("/api/dashboard/summary", { method: "GET" });
+      const data = (await response.json()) as
+        | DashboardSummaryResponse
+        | { error: string };
+
+      if (!response.ok || "error" in data) {
+        const message =
+          "error" in data ? data.error : "Unable to load dashboard summary.";
+        setError(message);
+        return;
+      }
+
+      setSummary(data.summary);
+      setSummaryContextWorkspaceId(data.activeWorkspaceId);
+
+      if (mode === "manual") {
+        pushActivity(`Summary loaded for workspace ${data.activeWorkspaceId}`);
+        return;
+      }
+
+      pushActivity(
+        `Summary auto-synced for workspace ${data.activeWorkspaceId}`,
+      );
+    },
+    [pushActivity],
+  );
 
   const loadTasks = useCallback(
     async (mode: "manual" | "auto" = "manual") => {
@@ -702,6 +763,7 @@ export default function WorkspaceDashboardClient({
     pushActivity(`Workspace switched: ${workspaceName}`);
 
     await refreshContext();
+    await loadSummary("auto");
     await loadTasks("auto");
     await loadDeliverables("auto");
     await loadMembers("auto");
@@ -759,6 +821,88 @@ export default function WorkspaceDashboardClient({
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           Current role: {activeRole ?? "Unknown"}
         </p>
+      </section>
+
+      <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Summary (Scoped)
+          </h2>
+          <button
+            type="button"
+            onClick={() => {
+              void loadSummary("manual");
+            }}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            Load Summary
+          </button>
+        </div>
+
+        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          {summaryContextWorkspaceId
+            ? `API scoped to workspace: ${summaryContextWorkspaceId}`
+            : "Load summary to verify active workspace dashboard scope."}
+        </p>
+
+        {!summary ? (
+          <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+            No summary loaded yet.
+          </p>
+        ) : (
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Tasks</p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                {summary.tasksTotal}
+              </p>
+            </div>
+            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400">TODO</p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                {summary.tasksTodo}
+              </p>
+            </div>
+            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                IN_PROGRESS
+              </p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                {summary.tasksInProgress}
+              </p>
+            </div>
+            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400">DONE</p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                {summary.tasksDone}
+              </p>
+            </div>
+            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Deliverables
+              </p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                {summary.deliverablesTotal}
+              </p>
+            </div>
+            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Members
+              </p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                {summary.membersTotal}
+              </p>
+            </div>
+            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Activity Events
+              </p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                {summary.activityEventsTotal}
+              </p>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
@@ -856,7 +1000,7 @@ export default function WorkspaceDashboardClient({
         </div>
       </section>
 
-      <section className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+      <section id="invite" className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
           Invite Member
         </h2>
