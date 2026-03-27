@@ -20,7 +20,7 @@ export default function InviteTokenPage({ params }: InvitePageProps) {
   const acceptInvite = async () => {
     setState({ kind: "loading" });
 
-    const response = await fetch("/api/invites/accept", {
+    const response = await fetch("/clientops/api/invites/accept", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),

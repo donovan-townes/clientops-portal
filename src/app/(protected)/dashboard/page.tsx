@@ -175,6 +175,7 @@ export default async function DashboardPage() {
       initialActivityEventsContextWorkspaceId={
         context.activeWorkspace?.id ?? null
       }
+      fileUploadsEnabled={process.env.ENABLE_FILE_UPLOADS !== "false"}
     />
   );
 }

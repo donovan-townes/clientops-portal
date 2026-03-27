@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getServerSession } from "next-auth";
 import SignOutButton from "@/components/sign-out-button";
 import { authOptions } from "@/lib/auth";
@@ -10,9 +11,14 @@ export default async function AppHeader() {
     <header className="border-b border-gray-200 bg-white py-4 dark:border-gray-800 dark:bg-gray-950">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-500">
-            <span className="text-lg font-bold text-white">⚙️</span>
-          </div>
+          <Image
+            src="/clientops/client-ops-logo.svg"
+            alt="Client Ops logo"
+            width={52}
+            height={34}
+            className="h-auto w-[52px]"
+            style={{ height: "auto" }}
+          />
           <div className="flex flex-col leading-tight">
             <Link
               href="/"

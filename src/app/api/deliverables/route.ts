@@ -152,6 +152,16 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (process.env.ENABLE_FILE_UPLOADS === "false") {
+    return NextResponse.json(
+      {
+        error:
+          "File uploads are disabled in this deployment. This feature is available in a self-hosted instance.",
+      },
+      { status: 503 },
+    );
+  }
+
   const resolved = await resolveContext(request);
 
   if (!resolved.ok) {

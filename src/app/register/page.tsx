@@ -2,6 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -22,7 +23,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
 
-    const response = await fetch("/api/register", {
+    const response = await fetch("/clientops/api/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -61,9 +62,14 @@ export default function RegisterPage() {
         {/* Header */}
         <div className="space-y-3 text-center">
           <div className="flex justify-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-500 text-xl">
-              ✨
-            </div>
+            <Image
+              src="/clientops/client-ops-logo.svg"
+              alt="Client Ops logo"
+              width={64}
+              height={43}
+              className="h-auto w-16"
+              style={{ height: "auto" }}
+            />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             Get Started

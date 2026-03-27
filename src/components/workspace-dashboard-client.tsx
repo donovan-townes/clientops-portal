@@ -118,6 +118,7 @@ type WorkspaceDashboardClientProps = {
   initialActiveRole: Role | null;
   initialActivityEvents: ActivityEvent[];
   initialActivityEventsContextWorkspaceId: string | null;
+  fileUploadsEnabled?: boolean;
 };
 
 export default function WorkspaceDashboardClient({
@@ -134,6 +135,7 @@ export default function WorkspaceDashboardClient({
   initialActiveRole,
   initialActivityEvents,
   initialActivityEventsContextWorkspaceId,
+  fileUploadsEnabled = true,
 }: WorkspaceDashboardClientProps) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>(initialWorkspaces);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(
@@ -226,7 +228,7 @@ export default function WorkspaceDashboardClient({
   }, []);
 
   const refreshContext = async () => {
-    const response = await fetch("/api/workspaces", { method: "GET" });
+    const response = await fetch("/clientops/api/workspaces", { method: "GET" });
     const data = (await response.json()) as
       | WorkspaceListResponse
       | { error: string };
@@ -269,7 +271,7 @@ export default function WorkspaceDashboardClient({
     setSubmitting(true);
     setError(null);
 
-    const response = await fetch("/api/workspaces", {
+    const response = await fetch("/clientops/api/workspaces", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: newWorkspaceName }),
@@ -303,7 +305,7 @@ export default function WorkspaceDashboardClient({
     async (mode: "manual" | "auto" | "silent" = "manual") => {
       setError(null);
 
-      const response = await fetch("/api/dashboard/summary", { method: "GET" });
+      const response = await fetch("/clientops/api/dashboard/summary", { method: "GET" });
       const data = (await response.json()) as
         | DashboardSummaryResponse
         | { error: string };
@@ -338,7 +340,7 @@ export default function WorkspaceDashboardClient({
     async (mode: "manual" | "auto" | "silent" = "manual") => {
       setError(null);
 
-      const response = await fetch("/api/tasks", { method: "GET" });
+      const response = await fetch("/clientops/api/tasks", { method: "GET" });
       const data = (await response.json()) as TasksResponse | { error: string };
 
       if (!response.ok || "error" in data) {
@@ -376,7 +378,7 @@ export default function WorkspaceDashboardClient({
     async (mode: "manual" | "auto" | "silent" = "manual") => {
       setError(null);
 
-      const response = await fetch("/api/members", { method: "GET" });
+      const response = await fetch("/clientops/api/members", { method: "GET" });
       const data = (await response.json()) as
         | MembersResponse
         | { error: string };
@@ -414,7 +416,7 @@ export default function WorkspaceDashboardClient({
     async (mode: "manual" | "auto" | "silent" = "manual") => {
       setError(null);
 
-      const response = await fetch("/api/deliverables", { method: "GET" });
+      const response = await fetch("/clientops/api/deliverables", { method: "GET" });
       const data = (await response.json()) as
         | DeliverablesResponse
         | { error: string };
@@ -451,7 +453,7 @@ export default function WorkspaceDashboardClient({
     async (mode: "manual" | "auto" | "silent" = "manual") => {
       setError(null);
 
-      const response = await fetch("/api/activity", { method: "GET" });
+      const response = await fetch("/clientops/api/activity", { method: "GET" });
       const data = (await response.json()) as
         | ActivityEventsResponse
         | { error: string };
@@ -489,7 +491,7 @@ export default function WorkspaceDashboardClient({
     setTasksSubmitting(true);
     setError(null);
 
-    const response = await fetch("/api/tasks", {
+    const response = await fetch("/clientops/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: newTaskTitle }),
@@ -536,7 +538,7 @@ export default function WorkspaceDashboardClient({
       formData.set("taskId", deliverableTaskId.trim());
     }
 
-    const response = await fetch("/api/deliverables", {
+    const response = await fetch("/clientops/api/deliverables", {
       method: "POST",
       body: formData,
     });
@@ -573,7 +575,7 @@ export default function WorkspaceDashboardClient({
     setDeliverableDeletingId(deliverable.id);
     setError(null);
 
-    const response = await fetch(`/api/deliverables/${deliverable.id}`, {
+    const response = await fetch(`/clientops/api/deliverables/${deliverable.id}`, {
       method: "DELETE",
     });
 
@@ -617,7 +619,7 @@ export default function WorkspaceDashboardClient({
     setTaskUpdatingId(taskId);
     setError(null);
 
-    const response = await fetch(`/api/tasks/${taskId}`, {
+    const response = await fetch(`/clientops/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -679,7 +681,7 @@ export default function WorkspaceDashboardClient({
     setTaskDeletingId(task.id);
     setError(null);
 
-    const response = await fetch(`/api/tasks/${task.id}`, {
+    const response = await fetch(`/clientops/api/tasks/${task.id}`, {
       method: "DELETE",
     });
 
@@ -727,7 +729,7 @@ export default function WorkspaceDashboardClient({
 
     setInviteSubmitting(true);
 
-    const response = await fetch("/api/invites", {
+    const response = await fetch("/clientops/api/invites", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -773,7 +775,7 @@ export default function WorkspaceDashboardClient({
 
     setError(null);
 
-    const response = await fetch("/api/workspaces/active", {
+    const response = await fetch("/clientops/api/workspaces/active", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ workspaceId: targetWorkspaceId }),
@@ -1251,7 +1253,17 @@ export default function WorkspaceDashboardClient({
                     Deliverables
                   </h2>
 
-                  {canUploadDeliverables ? (
+                  {!fileUploadsEnabled ? (
+                    <div className="mt-4 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/30">
+                      <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                        File uploads are disabled
+                      </p>
+                      <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">
+                        This is a portfolio demo — file storage is not enabled
+                        in this deployment.
+                      </p>
+                    </div>
+                  ) : canUploadDeliverables ? (
                     <form
                       onSubmit={handleUploadDeliverable}
                       className="mt-4 flex flex-col gap-3"
