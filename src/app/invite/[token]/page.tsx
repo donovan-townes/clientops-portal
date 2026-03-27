@@ -47,51 +47,65 @@ export default function InviteTokenPage({ params }: InvitePageProps) {
   };
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-xl px-6 py-12">
-      <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-          Accept Workspace Invite
-        </h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Accept your invite to join the workspace.
-        </p>
-
-        {state.kind === "error" ? (
-          <p className="text-sm text-red-600 dark:text-red-400">
-            {state.message}
-          </p>
-        ) : null}
-
-        {state.kind === "success" ? (
-          <div className="space-y-2 text-sm text-green-700 dark:text-green-400">
-            <p>Invite accepted successfully.</p>
-            <p>Workspace ID: {state.workspaceId}</p>
-            <Link
-              className="inline-flex rounded-md border border-gray-300 px-3 py-2 text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"
-              href="/dashboard"
-            >
-              Go to dashboard
-            </Link>
+    <main className="flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-6 dark:from-gray-950 dark:to-gray-900">
+      <div className="w-full max-w-md space-y-8">
+        <div className="space-y-3 text-center">
+          <div className="flex justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 text-xl text-white">
+              ✉️
+            </div>
           </div>
-        ) : (
-          <button
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60"
-            disabled={state.kind === "loading"}
-            onClick={() => {
-              void acceptInvite();
-            }}
-            type="button"
-          >
-            {state.kind === "loading" ? "Accepting..." : "Accept invite"}
-          </button>
-        )}
-
-        {state.kind === "error" && state.status === 401 ? (
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            You must sign in before accepting this invite.{" "}
-            <Link href="/login">Go to login</Link>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Workspace Invitation
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Accept your invite to join the shared workspace.
           </p>
-        ) : null}
+        </div>
+
+        <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-8 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+          {state.kind === "error" ? (
+            <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-400">
+              {state.message}
+            </div>
+          ) : null}
+
+          {state.kind === "success" ? (
+            <div className="space-y-3 text-sm text-emerald-700 dark:text-emerald-400">
+              <p className="font-medium">Invite accepted successfully.</p>
+              <p>You can now access this workspace from your dashboard.</p>
+              <Link
+                className="inline-flex rounded-lg border border-gray-300 px-3 py-2 text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"
+                href="/dashboard"
+              >
+                Go to dashboard
+              </Link>
+            </div>
+          ) : (
+            <button
+              className="w-full rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 py-3 text-sm font-semibold text-white transition-all hover:from-blue-600 hover:to-cyan-600 disabled:opacity-60"
+              disabled={state.kind === "loading"}
+              onClick={() => {
+                void acceptInvite();
+              }}
+              type="button"
+            >
+              {state.kind === "loading" ? "Accepting..." : "Accept invite"}
+            </button>
+          )}
+
+          {state.kind === "error" && state.status === 401 ? (
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              You must sign in before accepting this invite.{" "}
+              <Link
+                href="/login"
+                className="font-medium text-cyan-500 hover:text-cyan-600"
+              >
+                Go to login
+              </Link>
+            </p>
+          ) : null}
+        </div>
       </div>
     </main>
   );

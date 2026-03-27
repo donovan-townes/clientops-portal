@@ -4,16 +4,16 @@ export default async function Home() {
   return (
     <main className="min-h-screen w-full">
       {/* Hero Section */}
-      <section className="mx-auto max-w-5xl px-6 py-20">
+      <section className="mx-auto max-w-7xl px-6 py-20">
         <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 lg:items-center">
           <div className="space-y-6">
             <div className="space-y-3">
               <div className="inline-block rounded-full bg-cyan-100 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
-                MVP in Development
+                Client Operations Platform
               </div>
-              <h2 className="text-5xl font-bold tracking-tight text-gray-900 dark:text-white">
+              <h1 className="text-5xl font-bold tracking-tight text-gray-900 dark:text-white">
                 Multi-workspace operations platform
-              </h2>
+              </h1>
               <p className="text-lg text-gray-600 dark:text-gray-400">
                 Designed for agencies and freelancers to manage client projects,
                 team collaboration, and deliverables in one unified workspace.
@@ -28,10 +28,10 @@ export default async function Home() {
                 Create Account
               </Link>
               <Link
-                href="/test-register"
+                href="/login"
                 className="inline-flex rounded-lg border-2 border-gray-300 px-6 py-3 font-medium text-gray-900 hover:bg-gray-50 dark:border-gray-700 dark:text-white dark:hover:bg-gray-800"
               >
-                Test API
+                Sign In
               </Link>
             </div>
           </div>
@@ -77,10 +77,11 @@ export default async function Home() {
 
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-gray-50 px-6 py-8 dark:border-gray-800 dark:bg-gray-900">
-        <div className="mx-auto max-w-5xl text-center text-sm text-gray-600 dark:text-gray-400">
+        <div className="mx-auto max-w-7xl text-center text-sm text-gray-600 dark:text-gray-400">
           <p>
-            Client Ops Portal • MVP Development Version • Authentication &
-            Account Management
+            A capstone portfolio application by Donovan
+            Townes, demonstrating modern full-stack product engineering for
+            multi-workspace agency operations.
           </p>
         </div>
       </footer>

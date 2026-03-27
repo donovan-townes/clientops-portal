@@ -7,8 +7,8 @@ export default async function AppHeader() {
   const session = await getServerSession(authOptions);
 
   return (
-    <header className="border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-800 dark:bg-gray-950">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+    <header className="border-b border-gray-200 bg-white py-4 dark:border-gray-800 dark:bg-gray-950">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-500">
             <span className="text-lg font-bold text-white">⚙️</span>
