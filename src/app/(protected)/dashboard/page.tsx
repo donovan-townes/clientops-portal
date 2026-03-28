@@ -1,6 +1,12 @@
 import { cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
+import type {
+  ActivityEvent as PrismaActivityEvent,
+  Deliverable as PrismaDeliverable,
+  Membership as PrismaMembership,
+  Task as PrismaTask,
+} from "@prisma/client";
 import WorkspaceDashboardClient from "@/components/workspace-dashboard-client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -34,7 +40,7 @@ export default async function DashboardPage() {
     candidateWorkspaceId,
   );
 
-  const initialTasks = context.activeWorkspace
+  const initialTasks: PrismaTask[] = context.activeWorkspace
     ? await prisma.task.findMany({
         where: { workspaceId: context.activeWorkspace.id },
         orderBy: { createdAt: "desc" },
@@ -94,14 +100,16 @@ export default async function DashboardPage() {
     };
   }
 
-  const initialDeliverables = context.activeWorkspace
+  const initialDeliverables: PrismaDeliverable[] = context.activeWorkspace
     ? await prisma.deliverable.findMany({
         where: { workspaceId: context.activeWorkspace.id },
         orderBy: { createdAt: "desc" },
       })
     : [];
 
-  const initialActivityEvents = context.activeWorkspace
+  const initialActivityEvents: Array<
+    PrismaActivityEvent & { actor: { email: string } }
+  > = context.activeWorkspace
     ? await prisma.activityEvent.findMany({
         where: { workspaceId: context.activeWorkspace.id },
         orderBy: { createdAt: "desc" },
@@ -110,7 +118,8 @@ export default async function DashboardPage() {
       })
     : [];
 
-  const initialMembers = context.activeWorkspace
+  const initialMembers: Array<PrismaMembership & { user: { email: string } }> =
+    context.activeWorkspace
     ? await prisma.membership.findMany({
         where: { workspaceId: context.activeWorkspace.id },
         include: {
@@ -139,21 +148,21 @@ export default async function DashboardPage() {
     <WorkspaceDashboardClient
       initialWorkspaces={context.workspaces}
       initialActiveWorkspaceId={context.activeWorkspace?.id ?? null}
-      initialTasks={initialTasks.map((task) => ({
+      initialTasks={initialTasks.map((task: PrismaTask) => ({
         ...task,
         dueAt: task.dueAt ? task.dueAt.toISOString() : null,
       }))}
       initialTasksContextWorkspaceId={context.activeWorkspace?.id ?? null}
       initialSummary={initialSummary}
       initialSummaryContextWorkspaceId={context.activeWorkspace?.id ?? null}
-      initialDeliverables={initialDeliverables.map((deliverable) => ({
+      initialDeliverables={initialDeliverables.map((deliverable: PrismaDeliverable) => ({
         ...deliverable,
         createdAt: deliverable.createdAt.toISOString(),
       }))}
       initialDeliverablesContextWorkspaceId={
         context.activeWorkspace?.id ?? null
       }
-      initialMembers={initialMembers.map((membership) => ({
+      initialMembers={initialMembers.map((membership: PrismaMembership & { user: { email: string } }) => ({
         id: membership.id,
         workspaceId: membership.workspaceId,
         userId: membership.userId,
@@ -163,7 +172,7 @@ export default async function DashboardPage() {
       }))}
       initialMembersContextWorkspaceId={context.activeWorkspace?.id ?? null}
       initialActiveRole={initialActiveMembership?.role ?? null}
-      initialActivityEvents={initialActivityEvents.map((event) => ({
+      initialActivityEvents={initialActivityEvents.map((event: PrismaActivityEvent & { actor: { email: string } }) => ({
         id: event.id,
         workspaceId: event.workspaceId,
         actorUserId: event.actorUserId,
