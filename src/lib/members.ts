@@ -44,7 +44,7 @@ export async function listMembersForWorkspace(
     },
   });
 
-  const members: WorkspaceMemberSummary[] = memberships.map((membership) => ({
+  const members: WorkspaceMemberSummary[] = memberships.map((membership: (typeof memberships)[number]) => ({
     id: membership.id,
     workspaceId: membership.workspaceId,
     userId: membership.userId,
