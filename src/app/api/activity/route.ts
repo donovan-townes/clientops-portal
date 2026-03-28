@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     include: { actor: { select: { email: true } } },
   });
 
-  const events = rawEvents.map((e) => ({
+  const events = rawEvents.map((e: (typeof rawEvents)[number]) => ({
     id: e.id,
     workspaceId: e.workspaceId,
     actorUserId: e.actorUserId,
