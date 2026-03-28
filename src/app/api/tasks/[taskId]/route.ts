@@ -52,7 +52,10 @@ async function resolveContext(request: Request): Promise<ResolvedRouteContext> {
   if (!session?.user?.id) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Unauthenticated" }, { status: 401 }),
+      response: NextResponse.json(
+        { error: "Unauthenticated" },
+        { status: 401 },
+      ),
     };
   }
 
@@ -168,7 +171,9 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   if (assigneeUserId !== undefined) {
-    updateData.assigneeUserId = assigneeUserId.trim() ? assigneeUserId.trim() : null;
+    updateData.assigneeUserId = assigneeUserId.trim()
+      ? assigneeUserId.trim()
+      : null;
   }
 
   if (dueAt !== undefined) {

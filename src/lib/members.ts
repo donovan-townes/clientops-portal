@@ -1,5 +1,5 @@
-import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import type { Role } from "@/lib/domain-types";
 import { canViewMembers } from "@/lib/rbac";
 
 export type WorkspaceMemberSummary = {

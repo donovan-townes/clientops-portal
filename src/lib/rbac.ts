@@ -1,33 +1,34 @@
-import { Role } from "@prisma/client";
+import type { Role } from "@/lib/domain-types";
+import { ROLES } from "@/lib/domain-types";
 
 type RoleSet = Set<Role>;
 
 const ACTION_MATRIX = {
-  createWorkspace: new Set<Role>([Role.OWNER]),
-  inviteMember: new Set<Role>([Role.OWNER, Role.ADMIN]),
-  manageMembers: new Set<Role>([Role.OWNER]),
+  createWorkspace: new Set<Role>([ROLES.OWNER]),
+  inviteMember: new Set<Role>([ROLES.OWNER, ROLES.ADMIN]),
+  manageMembers: new Set<Role>([ROLES.OWNER]),
   viewMembers: new Set<Role>([
-    Role.OWNER,
-    Role.ADMIN,
-    Role.CONTRIBUTOR,
-    Role.VIEWER,
+    ROLES.OWNER,
+    ROLES.ADMIN,
+    ROLES.CONTRIBUTOR,
+    ROLES.VIEWER,
   ]),
-  createTask: new Set<Role>([Role.OWNER, Role.ADMIN, Role.CONTRIBUTOR]),
-  editTask: new Set<Role>([Role.OWNER, Role.ADMIN, Role.CONTRIBUTOR]),
-  deleteTask: new Set<Role>([Role.OWNER, Role.ADMIN]),
-  uploadFile: new Set<Role>([Role.OWNER, Role.ADMIN, Role.CONTRIBUTOR]),
-  deleteFile: new Set<Role>([Role.OWNER, Role.ADMIN]),
+  createTask: new Set<Role>([ROLES.OWNER, ROLES.ADMIN, ROLES.CONTRIBUTOR]),
+  editTask: new Set<Role>([ROLES.OWNER, ROLES.ADMIN, ROLES.CONTRIBUTOR]),
+  deleteTask: new Set<Role>([ROLES.OWNER, ROLES.ADMIN]),
+  uploadFile: new Set<Role>([ROLES.OWNER, ROLES.ADMIN, ROLES.CONTRIBUTOR]),
+  deleteFile: new Set<Role>([ROLES.OWNER, ROLES.ADMIN]),
   viewTasksAndFiles: new Set<Role>([
-    Role.OWNER,
-    Role.ADMIN,
-    Role.CONTRIBUTOR,
-    Role.VIEWER,
+    ROLES.OWNER,
+    ROLES.ADMIN,
+    ROLES.CONTRIBUTOR,
+    ROLES.VIEWER,
   ]),
   viewActivityLog: new Set<Role>([
-    Role.OWNER,
-    Role.ADMIN,
-    Role.CONTRIBUTOR,
-    Role.VIEWER,
+    ROLES.OWNER,
+    ROLES.ADMIN,
+    ROLES.CONTRIBUTOR,
+    ROLES.VIEWER,
   ]),
 } as const;
 

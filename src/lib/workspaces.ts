@@ -1,5 +1,5 @@
-import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { ROLES } from "@/lib/domain-types";
 
 type WorkspaceSummary = {
   id: string;
@@ -25,7 +25,7 @@ export async function createWorkspaceForUser(userId: string, name: string) {
       memberships: {
         create: {
           userId,
-          role: Role.OWNER,
+          role: ROLES.OWNER,
         },
       },
     },

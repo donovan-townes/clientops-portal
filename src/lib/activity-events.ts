@@ -1,11 +1,11 @@
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import type { JsonValue } from "@/lib/domain-types";
 
 type ActivityEventInput = {
   workspaceId: string;
   actorUserId: string;
   type: string;
-  payloadJson?: Prisma.InputJsonValue;
+  payloadJson?: JsonValue;
 };
 
 export async function logActivityEvent({
@@ -19,7 +19,9 @@ export async function logActivityEvent({
       workspaceId,
       actorUserId,
       type,
-      payloadJson,
+      ...(payloadJson !== undefined && payloadJson !== null
+        ? { payloadJson }
+        : {}),
     },
   });
 }

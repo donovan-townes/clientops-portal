@@ -1,12 +1,13 @@
-import { Role } from "@prisma/client";
 import crypto from "node:crypto";
+import type { Role } from "@/lib/domain-types";
+import { ROLES } from "@/lib/domain-types";
 import { prisma } from "@/lib/prisma";
 import { canInvite } from "@/lib/rbac";
 const VALID_INVITE_ROLES = new Set<string>([
-  Role.OWNER,
-  Role.ADMIN,
-  Role.CONTRIBUTOR,
-  Role.VIEWER,
+  ROLES.OWNER,
+  ROLES.ADMIN,
+  ROLES.CONTRIBUTOR,
+  ROLES.VIEWER,
 ]);
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
