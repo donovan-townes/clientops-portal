@@ -94,7 +94,9 @@ export async function acceptInvite(
     );
   }
 
-  type PrismaTransaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+  type PrismaTransaction = Parameters<
+    Parameters<typeof prisma.$transaction>[0]
+  >[0];
   return prisma.$transaction(async (tx: PrismaTransaction) => {
     const existingMembership = await tx.membership.findUnique({
       where: {

@@ -44,14 +44,16 @@ export async function listMembersForWorkspace(
     },
   });
 
-  const members: WorkspaceMemberSummary[] = memberships.map((membership: (typeof memberships)[number]) => ({
-    id: membership.id,
-    workspaceId: membership.workspaceId,
-    userId: membership.userId,
-    email: membership.user.email,
-    role: membership.role,
-    createdAt: membership.createdAt.toISOString(),
-  }));
+  const members: WorkspaceMemberSummary[] = memberships.map(
+    (membership: (typeof memberships)[number]) => ({
+      id: membership.id,
+      workspaceId: membership.workspaceId,
+      userId: membership.userId,
+      email: membership.user.email,
+      role: membership.role,
+      createdAt: membership.createdAt.toISOString(),
+    }),
+  );
 
   return {
     activeRole: activeMembership.role,
