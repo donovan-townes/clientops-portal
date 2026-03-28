@@ -1,4 +1,3 @@
-import { TaskStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
@@ -10,6 +9,12 @@ import {
   getActiveWorkspaceIdFromCookieHeader,
 } from "@/lib/workspace-context";
 import { resolveActiveWorkspaceForUser } from "@/lib/workspaces";
+
+const TASK_STATUSES = {
+  TODO: "TODO",
+  IN_PROGRESS: "IN_PROGRESS",
+  DONE: "DONE",
+} as const;
 
 function getContextErrorResponse() {
   return NextResponse.json(
@@ -68,16 +73,16 @@ export async function GET(request: Request) {
   ] = await Promise.all([
     prisma.task.count({ where: { workspaceId: activeWorkspaceId } }),
     prisma.task.count({
-      where: { workspaceId: activeWorkspaceId, status: TaskStatus.TODO },
+      where: { workspaceId: activeWorkspaceId, status: TASK_STATUSES.TODO },
     }),
     prisma.task.count({
       where: {
         workspaceId: activeWorkspaceId,
-        status: TaskStatus.IN_PROGRESS,
+        status: TASK_STATUSES.IN_PROGRESS,
       },
     }),
     prisma.task.count({
-      where: { workspaceId: activeWorkspaceId, status: TaskStatus.DONE },
+      where: { workspaceId: activeWorkspaceId, status: TASK_STATUSES.DONE },
     }),
     prisma.deliverable.count({ where: { workspaceId: activeWorkspaceId } }),
     prisma.membership.count({ where: { workspaceId: activeWorkspaceId } }),

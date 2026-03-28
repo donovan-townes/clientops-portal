@@ -1,4 +1,3 @@
-import { TaskStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { logActivityEvent } from "@/lib/activity-events";
@@ -11,6 +10,14 @@ import {
 } from "@/lib/workspace-context";
 import { canDeleteTask, canEditTask } from "@/lib/rbac";
 import { resolveActiveWorkspaceForUser } from "@/lib/workspaces";
+
+type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
+
+const TASK_STATUSES = {
+  TODO: "TODO",
+  IN_PROGRESS: "IN_PROGRESS",
+  DONE: "DONE",
+} as const satisfies Record<TaskStatus, TaskStatus>;
 
 type RouteContext = {
   params: Promise<{ taskId: string }> | { taskId: string };
@@ -148,7 +155,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   if (status !== undefined) {
-    if (!Object.values(TaskStatus).includes(status as TaskStatus)) {
+    if (!Object.values(TASK_STATUSES).includes(status as TaskStatus)) {
       return NextResponse.json(
         { error: "Task status is invalid" },
         { status: 400 },

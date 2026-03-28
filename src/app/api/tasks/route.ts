@@ -1,4 +1,3 @@
-import { TaskStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
@@ -11,6 +10,14 @@ import {
 } from "@/lib/workspace-context";
 import { canCreateTask, canViewTasksAndFiles } from "@/lib/rbac";
 import { resolveActiveWorkspaceForUser } from "@/lib/workspaces";
+
+type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
+
+const TASK_STATUSES = {
+  TODO: "TODO",
+  IN_PROGRESS: "IN_PROGRESS",
+  DONE: "DONE",
+} as const satisfies Record<TaskStatus, TaskStatus>;
 
 function getContextErrorResponse() {
   return NextResponse.json(
@@ -84,7 +91,7 @@ export async function GET(request: Request) {
 
   if (
     statusFilter &&
-    !Object.values(TaskStatus).includes(statusFilter as TaskStatus)
+    !Object.values(TASK_STATUSES).includes(statusFilter as TaskStatus)
   ) {
     return NextResponse.json(
       { error: "Task status filter is invalid" },
