@@ -1,12 +1,6 @@
 import { cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import type {
-  ActivityEvent as PrismaActivityEvent,
-  Deliverable as PrismaDeliverable,
-  Membership as PrismaMembership,
-  Task as PrismaTask,
-} from "@prisma/client";
 import WorkspaceDashboardClient from "@/components/workspace-dashboard-client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -21,6 +15,50 @@ type DashboardSummary = {
   deliverablesTotal: number;
   membersTotal: number;
   activityEventsTotal: number;
+};
+
+type DashboardTaskRecord = {
+  id: string;
+  workspaceId: string;
+  title: string;
+  description: string | null;
+  status: "TODO" | "IN_PROGRESS" | "DONE";
+  assigneeUserId: string | null;
+  dueAt: Date | null;
+  createdAt: Date;
+};
+
+type DashboardDeliverableRecord = {
+  id: string;
+  workspaceId: string;
+  taskId: string | null;
+  filename: string;
+  storageKey: string;
+  uploadedByUserId: string;
+  createdAt: Date;
+};
+
+type DashboardActivityEventRecord = {
+  id: string;
+  workspaceId: string;
+  actorUserId: string;
+  type: string;
+  payloadJson: unknown;
+  createdAt: Date;
+  actor: {
+    email: string;
+  };
+};
+
+type DashboardMemberRecord = {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  role: "OWNER" | "ADMIN" | "CONTRIBUTOR" | "VIEWER";
+  createdAt: Date;
+  user: {
+    email: string;
+  };
 };
 
 export default async function DashboardPage() {
@@ -40,7 +78,7 @@ export default async function DashboardPage() {
     candidateWorkspaceId,
   );
 
-  const initialTasks: PrismaTask[] = context.activeWorkspace
+  const initialTasks: DashboardTaskRecord[] = context.activeWorkspace
     ? await prisma.task.findMany({
         where: { workspaceId: context.activeWorkspace.id },
         orderBy: { createdAt: "desc" },
@@ -100,26 +138,25 @@ export default async function DashboardPage() {
     };
   }
 
-  const initialDeliverables: PrismaDeliverable[] = context.activeWorkspace
-    ? await prisma.deliverable.findMany({
-        where: { workspaceId: context.activeWorkspace.id },
-        orderBy: { createdAt: "desc" },
-      })
-    : [];
-
-  const initialActivityEvents: Array<
-    PrismaActivityEvent & { actor: { email: string } }
-  > = context.activeWorkspace
-    ? await prisma.activityEvent.findMany({
-        where: { workspaceId: context.activeWorkspace.id },
-        orderBy: { createdAt: "desc" },
-        take: 50,
-        include: { actor: { select: { email: true } } },
-      })
-    : [];
-
-  const initialMembers: Array<PrismaMembership & { user: { email: string } }> =
+  const initialDeliverables: DashboardDeliverableRecord[] =
     context.activeWorkspace
+      ? await prisma.deliverable.findMany({
+          where: { workspaceId: context.activeWorkspace.id },
+          orderBy: { createdAt: "desc" },
+        })
+      : [];
+
+  const initialActivityEvents: DashboardActivityEventRecord[] =
+    context.activeWorkspace
+      ? await prisma.activityEvent.findMany({
+          where: { workspaceId: context.activeWorkspace.id },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+          include: { actor: { select: { email: true } } },
+        })
+      : [];
+
+  const initialMembers: DashboardMemberRecord[] = context.activeWorkspace
     ? await prisma.membership.findMany({
         where: { workspaceId: context.activeWorkspace.id },
         include: {
@@ -148,39 +185,45 @@ export default async function DashboardPage() {
     <WorkspaceDashboardClient
       initialWorkspaces={context.workspaces}
       initialActiveWorkspaceId={context.activeWorkspace?.id ?? null}
-      initialTasks={initialTasks.map((task: PrismaTask) => ({
+      initialTasks={initialTasks.map((task: DashboardTaskRecord) => ({
         ...task,
         dueAt: task.dueAt ? task.dueAt.toISOString() : null,
       }))}
       initialTasksContextWorkspaceId={context.activeWorkspace?.id ?? null}
       initialSummary={initialSummary}
       initialSummaryContextWorkspaceId={context.activeWorkspace?.id ?? null}
-      initialDeliverables={initialDeliverables.map((deliverable: PrismaDeliverable) => ({
-        ...deliverable,
-        createdAt: deliverable.createdAt.toISOString(),
-      }))}
+      initialDeliverables={initialDeliverables.map(
+        (deliverable: DashboardDeliverableRecord) => ({
+          ...deliverable,
+          createdAt: deliverable.createdAt.toISOString(),
+        }),
+      )}
       initialDeliverablesContextWorkspaceId={
         context.activeWorkspace?.id ?? null
       }
-      initialMembers={initialMembers.map((membership: PrismaMembership & { user: { email: string } }) => ({
-        id: membership.id,
-        workspaceId: membership.workspaceId,
-        userId: membership.userId,
-        email: membership.user.email,
-        role: membership.role,
-        createdAt: membership.createdAt.toISOString(),
-      }))}
+      initialMembers={initialMembers.map(
+        (membership: DashboardMemberRecord) => ({
+          id: membership.id,
+          workspaceId: membership.workspaceId,
+          userId: membership.userId,
+          email: membership.user.email,
+          role: membership.role,
+          createdAt: membership.createdAt.toISOString(),
+        }),
+      )}
       initialMembersContextWorkspaceId={context.activeWorkspace?.id ?? null}
       initialActiveRole={initialActiveMembership?.role ?? null}
-      initialActivityEvents={initialActivityEvents.map((event: PrismaActivityEvent & { actor: { email: string } }) => ({
-        id: event.id,
-        workspaceId: event.workspaceId,
-        actorUserId: event.actorUserId,
-        actorEmail: event.actor.email,
-        type: event.type,
-        payloadJson: event.payloadJson,
-        createdAt: event.createdAt.toISOString(),
-      }))}
+      initialActivityEvents={initialActivityEvents.map(
+        (event: DashboardActivityEventRecord) => ({
+          id: event.id,
+          workspaceId: event.workspaceId,
+          actorUserId: event.actorUserId,
+          actorEmail: event.actor.email,
+          type: event.type,
+          payloadJson: event.payloadJson,
+          createdAt: event.createdAt.toISOString(),
+        }),
+      )}
       initialActivityEventsContextWorkspaceId={
         context.activeWorkspace?.id ?? null
       }
